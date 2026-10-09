@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moover_driver/design/theme.dart';
 import 'package:moover_driver/screens/login.dart';
+import 'package:moover_driver/screens/main_menu.dart';
 
 double contrast(Color a, Color b) {
   final la = a.computeLuminance(), lb = b.computeLuminance();
   return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);
 }
 
-const notConnected =
-    'Masuk belum tersedia: aplikasi belum terhubung ke server.';
+const wrongCredentials = 'Employee ID atau kata sandi salah.';
 
 Widget app({double textScale = 1}) => MaterialApp(
   theme: mooverTheme(),
@@ -32,7 +32,7 @@ void main() {
     await tester.pump();
     expect(find.text('Employee ID wajib diisi.'), findsOneWidget);
     expect(find.text('Kata sandi wajib diisi.'), findsOneWidget);
-    expect(find.text(notConnected), findsNothing);
+    expect(find.text(wrongCredentials), findsNothing);
 
     await tester.enterText(find.byType(TextFormField).first, 'DRV001');
     await tester.pump();
@@ -40,16 +40,32 @@ void main() {
     expect(find.text('Kata sandi wajib diisi.'), findsOneWidget);
   });
 
-  testWidgets('Masuk dengan field terisi tidak berpura-pura berhasil', (
-    tester,
-  ) async {
+  testWidgets('kredensial salah: pesan error, tetap di Login', (tester) async {
     await tester.pumpWidget(app());
-    await tester.enterText(find.byType(TextFormField).first, 'DRV001');
-    await tester.enterText(find.byType(TextFormField).last, 'rahasia');
+    for (final (id, pw) in [
+      ('DRV001', 'rahasia'),
+      (demoEmployeeId, 'salah'),
+      ('DRV001', demoPassword),
+    ]) {
+      await tester.enterText(find.byType(TextFormField).first, id);
+      await tester.enterText(find.byType(TextFormField).last, pw);
+      await tester.tap(find.text('Masuk'));
+      await tester.pumpAndSettle();
+      expect(find.text(wrongCredentials), findsOneWidget, reason: '$id/$pw');
+      expect(find.byType(LoginPage), findsOneWidget);
+      expect(find.byType(MainMenuPage), findsNothing);
+    }
+  });
+
+  testWidgets('kredensial demo benar: masuk ke Main Menu', (tester) async {
+    await tester.pumpWidget(app());
+    // Spasi di Employee ID diabaikan (trim), sama dengan validator.
+    await tester.enterText(find.byType(TextFormField).first, ' DEMO001 ');
+    await tester.enterText(find.byType(TextFormField).last, demoPassword);
     await tester.tap(find.text('Masuk'));
-    await tester.pump();
-    expect(find.text(notConnected), findsOneWidget);
-    expect(find.byType(LoginPage), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(MainMenuPage), findsOneWidget);
+    expect(find.byType(LoginPage), findsNothing);
   });
 
   testWidgets('kata sandi bisa ditampilkan dan disembunyikan', (tester) async {

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'design/theme.dart';
-import 'screens/login.dart';
+import 'screens/splash.dart';
 
 void main() {
   // Lisensi OFL font yang dibundel, agar tampil di halaman lisensi aplikasi.
@@ -23,9 +23,9 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       title: 'Moover',
       theme: mooverTheme(),
-      // ponytail: Login langsung jadi layar awal; S01 Landing/Splash dan cek
-      // sesi menunggu Q-B9 dan desain sesi.
-      home: const LoginPage(),
+      // ponytail: Splash belum mengecek sesi (menunggu kontrak sesi); selalu
+      // lanjut ke Landing.
+      home: const SplashPage(),
     );
   }
 }

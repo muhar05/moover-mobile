@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../design/theme.dart';
 import '../design/widgets.dart';
+import 'main_menu.dart';
 
-// D5: label bawaan M3 (#6B7280) di atas latar #F5F6F5 hanya 4,46:1. Label
-// normal memakai teks utama; warna fokus dan error tetap bawaan M3.
+// MOCK/DEMO: kredensial hardcode sementara, bukan autentikasi. Tidak ada
+// server, token, atau sesi tersimpan.
+// ponytail: hapus saat login API (API_CONTRACT U1) Terverifikasi.
+const demoEmployeeId = 'DEMO001';
+const demoPassword = 'demo1234';
+const demoDriverName = 'Driver Demo';
+
+// Label normal memakai teks utama (abyss); warna fokus (primary) dan error
+// tetap dari tema. Diuji ≥4,5:1 di test/login_test.dart.
 final _labelStyle = WidgetStateTextStyle.resolveWith(
   (s) => s.contains(WidgetState.focused) || s.contains(WidgetState.error)
       ? const TextStyle()
@@ -23,18 +31,32 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  final _employeeId = TextEditingController();
+  final _password = TextEditingController();
   bool _obscure = true;
   String? _message;
+
+  @override
+  void dispose() {
+    _employeeId.dispose();
+    _password.dispose();
+    super.dispose();
+  }
 
   void _submit() {
     setState(() => _message = null);
     if (!_formKey.currentState!.validate()) return;
-    // ponytail: autentikasi belum ada (API_CONTRACT U1 = Usulan). Ganti dengan
-    // panggilan login + state kredensial salah / akun nonaktif / tanpa koneksi
-    // saat kontrak backend Terverifikasi.
-    setState(
-      () => _message =
-          'Masuk belum tersedia: aplikasi belum terhubung ke server.',
+    // MOCK/DEMO. ponytail: ganti dengan panggilan login + state akun nonaktif
+    // / tanpa koneksi saat kontrak backend (U1) Terverifikasi.
+    if (_employeeId.text.trim() != demoEmployeeId ||
+        _password.text != demoPassword) {
+      setState(() => _message = 'Employee ID atau kata sandi salah.');
+      return;
+    }
+    // Hapus Landing dan Login dari stack: Back dari Main Menu menutup app.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const MainMenuPage()),
+      (_) => false,
     );
   }
 
@@ -57,6 +79,7 @@ class _LoginPageState extends State<LoginPage> {
                     const MooverLogo(height: 40),
                     const SizedBox(height: 32),
                     TextFormField(
+                      controller: _employeeId,
                       decoration: InputDecoration(
                         labelText: 'Employee ID',
                         labelStyle: _labelStyle,
@@ -72,6 +95,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      controller: _password,
                       decoration: InputDecoration(
                         labelText: 'Kata sandi',
                         labelStyle: _labelStyle,
@@ -105,12 +129,15 @@ class _LoginPageState extends State<LoginPage> {
                         child: Text(
                           _message!,
                           textAlign: TextAlign.center,
-                          style: textTheme.bodyMedium,
+                          // Warna error M3 (#BA1A1A): 6,00:1 di latar layar.
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ),
                     ],
                     const SizedBox(height: 24),
-                    // Teks utama, bukan textMuted: latar #F5F6F5 (D5).
+                    // Teks utama (onSurface), keterbacaan maksimal.
                     Text(
                       'Akun dibuat oleh admin.',
                       textAlign: TextAlign.center,

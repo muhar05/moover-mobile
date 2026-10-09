@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  lottie: ^3.6.1
 
 dev_dependencies:
   flutter_test:
@@ -18,6 +19,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/animations/
     - assets/brand/moover-logo.png
     - assets/fonts/OFL.txt
   # Plus Jakarta Sans 2.7.1 (tokotype), SIL OFL 1.1 — lihat assets/fonts/OFL.txt.

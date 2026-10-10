@@ -183,12 +183,6 @@ class _LandingScreenState extends State<LandingScreen> {
                                     ),
                                   ),
                                 ),
-                                const Positioned(
-                                  left: 14,
-                                  right: 14,
-                                  bottom: 14,
-                                  child: _EtaCard(),
-                                ),
                               ],
                             ),
                           ),
@@ -329,125 +323,6 @@ class _Dot extends StatelessWidget {
                 color: active ? MooverColors.cyan : MooverColors.sky,
                 borderRadius: BorderRadius.circular(3),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Kartu ETA dekoratif V2.1 di atas foto, data contoh statis. Dikecualikan
-/// dari semantik: bukan trip sungguhan. Skala teks dibatasi 1,3× agar kartu
-/// tetap di dalam bingkai foto pada teks 200%; teks kiri dipotong elipsis
-/// pada layar sempit (320 dp).
-class _EtaCard extends StatelessWidget {
-  const _EtaCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return ExcludeSemantics(
-      child: MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1.3,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: MooverColors.surface,
-            borderRadius: BorderRadius.circular(18), // V2.1, di luar skala
-            boxShadow: [
-              BoxShadow(
-                color: MooverColors.navy.withValues(alpha: 0.35),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14, // V2.1, di luar skala
-              vertical: MooverSpace.md,
-            ),
-            child: Row(
-              spacing: MooverSpace.md,
-              children: [
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: MooverColors.blueTint,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox.square(
-                    dimension: 40,
-                    child: Icon(Icons.person, color: MooverColors.primary),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kantor Pusat',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall!.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: MooverColors.text,
-                        ),
-                      ),
-                      // Slate di putih 6,13:1.
-                      Text(
-                        '3 penumpang · 12,4 km',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall!.copyWith(
-                          color: MooverColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // ETA tetap utuh: lebar maks 96, di layar sempit + teks besar
-                // diperkecil; sisa lebar untuk teks kiri (elipsis).
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 96),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          spacing: 6, // V2.1, di luar skala
-                          children: [
-                            const DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: MooverColors.cyan,
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox.square(dimension: 7),
-                            ),
-                            // live di putih 7,1:1.
-                            Text(
-                              'ETA',
-                              style: textTheme.labelSmall!.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: StatusTone.live.foreground,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '08.26 WIB',
-                          style: textTheme.titleSmall!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: MooverColors.text,
-                            fontFeatures: tabularFigures,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ),

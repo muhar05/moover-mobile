@@ -490,9 +490,7 @@ void main() {
       date: 'Tanggal Q',
       shiftProgress: progress,
       tripCount: 7,
-      nextTime: '11.15 WIB',
-      origin: 'Gudang Timur Lantai Dua Pintu Barat',
-      destination: 'Terminal Kedatangan Internasional',
+      clock: '11.15.42',
       clockInStatus: 'Status X',
       operatingHours: 'Jam Y',
     );
@@ -521,7 +519,7 @@ void main() {
       for (final t in [
         'Tanggal Q',
         '7 trip',
-        '11.15 WIB',
+        '11.15.42',
         'Status X',
         'Jam Y',
         'Kategori Z',
@@ -531,16 +529,12 @@ void main() {
       ]) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      final route = tester.widget<MooverRouteTimeline>(
-        find.byType(MooverRouteTimeline),
-      );
+      // V2.1 (keputusan 2026-10-10): agenda tanpa rute.
+      expect(find.byType(MooverRouteTimeline), findsNothing);
+      // Jam: tabular (D2), tanpa liveRegion (tidak diumumkan tiap detik).
       expect(
-        (route.origin, route.destination, route.onDark),
-        (
-          'Gudang Timur Lantai Dua Pintu Barat',
-          'Terminal Kedatangan Internasional',
-          true,
-        ),
+        tester.widget<Text>(find.text('11.15.42')).style!.fontFeatures,
+        tabularFigures,
       );
       expect(
         tester.widget<StatusBadge>(find.byType(StatusBadge)).tone,
@@ -604,6 +598,180 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('kartu trip tanpa asal: tujuan tebal + alamat muted', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        harness(
+          const MooverTripItem(
+            time: '06.45 WIB',
+            destination: 'Tujuan R',
+            address: 'Alamat S',
+            status: 'Status V',
+            tone: StatusTone.ok,
+            passengers: '9 orang',
+          ),
+        ),
+      );
+      expect(find.byType(MooverRouteTimeline), findsNothing);
+      final dest = tester.widget<Text>(find.text('Tujuan R'));
+      final addr = tester.widget<Text>(find.text('Alamat S'));
+      expect(dest.style!.fontWeight, FontWeight.w800);
+      expect(addr.maxLines, 2);
+      expect(
+        contrast(addr.style!.color!, MooverColors.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+      // Tujuan di atas alamat.
+      expect(
+        tester.getRect(find.text('Alamat S')).top,
+        greaterThanOrEqualTo(tester.getRect(find.text('Tujuan R')).bottom),
+      );
+      expect(
+        tester.getSemantics(find.byType(MooverTripItem)),
+        isSemantics(
+          label: '06.45 WIB\nStatus V\nKe Tujuan R\nAlamat S\n9 orang',
+        ),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('MooverMark: dekoratif, opacity dari parameter', (
+      tester,
+    ) async {
+      await tester.pumpWidget(harness(const MooverMark(opacity: 0.37)));
+      final img = tester.widget<Image>(find.byType(Image));
+      expect(img.excludeFromSemantics, isTrue);
+      expect(img.opacity!.value, 0.37);
+      expect(
+        (img.image as AssetImage).assetName,
+        'assets/brand/moover-mark.png',
+      );
+    });
+
+    testWidgets('MooverExtraTripCard: tombol hanya saat available', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      var added = 0;
+      Widget card(bool available) =>
+          MooverExtraTripCard(available: available, onAdd: () => added++);
+
+      await tester.pumpWidget(harness(card(true)));
+      final button = find.widgetWithText(FilledButton, 'Tambah trip baru');
+      expect(button, findsOneWidget);
+      await tester.tap(button);
+      expect(added, 1);
+      final style = tester.widget<FilledButton>(button).style!;
+      final bg = style.backgroundColor!.resolve({})!;
+      final fg = style.foregroundColor!.resolve({})!;
+      expect((bg, fg), (MooverColors.cyan, MooverColors.navy));
+      expect(contrast(fg, bg), greaterThanOrEqualTo(4.5));
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(52));
+      expect(find.text('Clock-in untuk menambah trip'), findsNothing);
+      // Ilustrasi dekoratif: tidak ada node semantik di luar teks + tombol.
+      expect(find.bySemanticsLabel(RegExp('.')), findsNWidgets(3));
+
+      await tester.pumpWidget(harness(card(false)));
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byType(InkWell), findsNothing);
+      final hint = tester.widget<Text>(
+        find.text('Clock-in untuk menambah trip'),
+      );
+      final hintBg = Color.alphaBlend(
+        const Color(0x14FFFFFF),
+        MooverColors.navy,
+      );
+      expect(contrast(hint.style!.color!, hintBg), greaterThanOrEqualTo(4.5));
+      for (final t in [
+        'Butuh trip tambahan?',
+        'Buat trip di luar jadwal hari ini.',
+      ]) {
+        final c = tester.widget<Text>(find.text(t)).style!.color!;
+        expect(contrast(c, MooverColors.navy), greaterThanOrEqualTo(4.5));
+      }
+      handle.dispose();
+    });
+
+    testWidgets('MooverExtraTripCard: mobil & marka bergerak; diam bila '
+        'reduced motion atau tersembunyi', (tester) async {
+      // translate kedua = geser mobil; garis pertama setelah jalan = marka.
+      (double car, double dash) frame() {
+        final translates = <double>[], lines = <double>[];
+        expect(
+          tester.renderObject(
+            find
+                .descendant(
+                  of: find.byType(MooverExtraTripCard),
+                  matching: find.byType(CustomPaint),
+                )
+                .first, // ilustrasi; berikutnya milik tombol
+          ),
+          paints..everything((m, a) {
+            if (m == #translate) translates.add(a[0] as double);
+            if (m == #drawLine) lines.add((a[0] as Offset).dx);
+            return true;
+          }),
+        );
+        return (translates[1], lines[1]);
+      }
+
+      Widget card({bool reduce = false, bool visible = true}) => MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: reduce),
+          child: Visibility(
+            visible: visible,
+            maintainState: true,
+            maintainSize: true,
+            maintainAnimation: true,
+            child: MooverExtraTripCard(available: true, onAdd: () {}),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(card());
+      // Marka yang digeser dipotong di ujung jalan (viewBox 320×120).
+      expect(
+        tester.renderObject(
+          find
+              .descendant(
+                of: find.byType(MooverExtraTripCard),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        ),
+        paints..clipRect(rect: const Rect.fromLTWH(0, 0, 320, 120)),
+      );
+      final a = frame();
+      expect(a.$1, -6, reason: 'roll mulai di −6 px');
+      await tester.pump(const Duration(milliseconds: 750));
+      final b = frame();
+      expect(b.$1, closeTo(0, 0.01), reason: 'seperempat siklus: tengah');
+      expect(b.$2, isNot(a.$2), reason: 'marka bergeser');
+      await tester.pump(const Duration(milliseconds: 750));
+      expect(frame().$1, closeTo(6, 0.01));
+
+      await tester.pumpWidget(card(reduce: true));
+      final still = frame();
+      expect(still.$1, 0, reason: 'diam di tengah');
+      await tester.pump(const Duration(seconds: 1));
+      expect(frame(), still);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      await tester.pumpWidget(card());
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.binding.hasScheduledFrame, isTrue);
+      await tester.pumpWidget(card(visible: false));
+      await tester
+          .pump(); // frame yang sudah dijadwalkan ticker sebelum berhenti
+      expect(
+        tester.binding.hasScheduledFrame,
+        isFalse,
+        reason: 'tab tersembunyi tidak menjalankan ticker',
+      );
+    });
+
     testWidgets('320dp, teks 200%: tanpa overflow', (tester) async {
       tester.view
         ..physicalSize = const Size(960, 1704)
@@ -613,13 +781,21 @@ void main() {
         harness(
           SingleChildScrollView(
             padding: const EdgeInsets.all(MooverSpace.screen),
-            child: Column(children: [agenda(), reimburse(), trip(next: true)]),
+            child: Column(
+              children: [
+                agenda(),
+                reimburse(),
+                trip(next: true),
+                MooverExtraTripCard(available: true, onAdd: () {}),
+                MooverExtraTripCard(available: false, onAdd: () {}),
+              ],
+            ),
           ),
           textScale: 2,
         ),
       );
       expect(tester.takeException(), isNull);
-      for (final t in ['Rp 1.234.567', '11.15 WIB', '06.45 WIB', 'Status V']) {
+      for (final t in ['Rp 1.234.567', '11.15.42', '06.45 WIB', 'Status V']) {
         expect(
           tester.getRect(find.text(t)).right,
           lessThanOrEqualTo(320),
@@ -726,6 +902,8 @@ void main() {
 
     Color textColor(WidgetTester tester, String text) =>
         tester.widget<Text>(find.text(text)).style!.color!;
+    FontWeight? textWeight(WidgetTester tester, String text) =>
+        tester.widget<Text>(find.text(text)).style!.fontWeight;
 
     testWidgets('warna terbaca di latar terang dan gelap', (tester) async {
       for (final (onDark, bg) in [
@@ -786,6 +964,14 @@ void main() {
         expect(o.right, lessThanOrEqualTo(320));
         expect(d.right, lessThanOrEqualTo(320));
       }
+    });
+
+    testWidgets('V2.1 Riwayat: asal teks biasa, tujuan tebal', (tester) async {
+      await tester.pumpWidget(
+        harness(const MooverRouteTimeline(origin: 'A', destination: 'B')),
+      );
+      expect(textWeight(tester, 'A'), FontWeight.w400);
+      expect(textWeight(tester, 'B'), FontWeight.w800);
     });
 
     testWidgets('semantics: satu label asal lalu tujuan, tanpa dobel', (

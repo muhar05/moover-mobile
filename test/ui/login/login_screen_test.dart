@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/core/widgets/widgets.dart';
 import 'package:moover_driver/ui/login/login_screen.dart';
 import 'package:moover_driver/ui/main_menu/main_menu_screen.dart';
 
@@ -24,11 +25,11 @@ Widget app({double textScale = 1}) => MaterialApp(
 );
 
 void main() {
-  testWidgets('Masuk dengan field kosong menampilkan validasi per field', (
+  testWidgets('Login dengan field kosong menampilkan validasi per field', (
     tester,
   ) async {
     await tester.pumpWidget(app());
-    await tester.tap(find.text('Masuk'));
+    await tester.tap(find.text('Login'));
     await tester.pump();
     expect(find.text('Employee ID wajib diisi.'), findsOneWidget);
     expect(find.text('Kata sandi wajib diisi.'), findsOneWidget);
@@ -49,7 +50,7 @@ void main() {
     ]) {
       await tester.enterText(find.byType(TextFormField).first, id);
       await tester.enterText(find.byType(TextFormField).last, pw);
-      await tester.tap(find.text('Masuk'));
+      await tester.tap(find.text('Login'));
       await tester.pumpAndSettle();
       expect(find.text(wrongCredentials), findsOneWidget, reason: '$id/$pw');
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -62,7 +63,7 @@ void main() {
     // Spasi di Employee ID diabaikan (trim), sama dengan validator.
     await tester.enterText(find.byType(TextFormField).first, ' DEMO001 ');
     await tester.enterText(find.byType(TextFormField).last, demoPassword);
-    await tester.tap(find.text('Masuk'));
+    await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
     expect(find.byType(MainMenuScreen), findsOneWidget);
     expect(find.byType(LoginScreen), findsNothing);
@@ -90,7 +91,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(app(textScale: 2));
-    await tester.tap(find.text('Masuk'), warnIfMissed: false);
+    await tester.tap(find.text('Login'), warnIfMissed: false);
     await tester.pump();
     await tester.drag(
       find.byType(SingleChildScrollView),
@@ -100,11 +101,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('label field ≥4,5:1 terhadap latar layar (hitungan WCAG)', (
+  testWidgets('label field ≥4,5:1 terhadap kartu putih (hitungan WCAG)', (
     tester,
   ) async {
     await tester.pumpWidget(app());
-    final bg = mooverTheme().scaffoldBackgroundColor;
+    // V2.1: label di atas isian, di kartu putih.
+    const bg = MooverColors.surface;
     Future<void> check(String state) async {
       await tester.pumpAndSettle();
       for (final label in ['Employee ID', 'Kata sandi']) {
@@ -133,8 +135,91 @@ void main() {
     await tester.tap(find.byType(TextFormField).last);
     await check('mengambang tanpa fokus (Employee ID), fokus (Kata sandi)');
     await tester.enterText(find.byType(TextFormField).first, '');
-    await tester.tap(find.text('Masuk'));
+    await tester.tap(find.text('Login'));
     await check('error');
+  });
+
+  testWidgets('dev: "Isi akun demo" mengisi kedua field (non-release)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    String text(int i) =>
+        tester.widget<TextField>(find.byType(TextField).at(i)).controller!.text;
+    expect((text(0), text(1)), ('', ''));
+    await tester.tap(find.text('Isi akun demo'));
+    await tester.pump();
+    expect((text(0), text(1)), (demoEmployeeId, demoPassword));
+    await tester.tap(find.text('Login'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MainMenuScreen), findsOneWidget);
+  });
+
+  testWidgets('V2.1: header navy, watermark, judul, Login di footer', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(app());
+    final header = find.byWidgetPredicate(
+      (w) => w is ColoredBox && w.color == MooverColors.navy,
+    );
+    expect(header, findsOneWidget);
+    // Watermark 14% di dalam header, terpotong di tepinya.
+    final mark = tester.widget<MooverMark>(find.byType(MooverMark));
+    expect(mark.opacity, 0.14);
+    expect(
+      find.descendant(of: header, matching: find.byType(MooverMark)),
+      findsOneWidget,
+    );
+    expect(
+      tester.getRect(find.byType(MooverMark)).bottom,
+      greaterThan(tester.getRect(header).bottom),
+    );
+    expect(
+      tester.getSemantics(find.text('Selamat datang kembali')),
+      isSemantics(label: 'Selamat datang kembali', isHeader: true),
+    );
+    // Kartu form menumpang 36dp ke header.
+    final card = find
+        .ancestor(of: find.byType(Form), matching: find.byType(Container))
+        .first;
+    expect(
+      tester.getRect(card).top,
+      moreOrLessEquals(tester.getRect(header).bottom - 36),
+    );
+    // Tombol Login di footer tetap (tidak ikut digulir), di tepi bawah.
+    expect(
+      find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.text('Login'),
+      ),
+      findsNothing,
+    );
+    expect(tester.getRect(find.byType(PrimaryButton)).bottom, 600 - 20);
+    // Tanpa riwayat: tidak ada tombol Kembali.
+    expect(find.byTooltip('Kembali'), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('tombol Kembali tampil bila bisa kembali', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: mooverTheme(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+            ),
+            child: const Text('buka'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('buka'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Kembali'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsNothing);
   });
 
   testWidgets('target sentuh ≥48dp dan kontrol berlabel', (tester) async {

@@ -20,10 +20,15 @@ flutter:
   assets:
     - assets/brand/moover-logo.png
     - assets/brand/moover-logo-reverse.png
+    - assets/brand/moover-mark.png
     # PLACEHOLDER Landing (2026-10-10), Unsplash License, ganti dengan foto
     # milik perusahaan. ID foto di nama file: unsplash.com/photos/<id>.
     # 1 Ahmed Nishaath, 2 Janosch Jost, 3 Ed Wingate.
     - assets/images/welcome/
+    # PLACEHOLDER tab Trip (2026-10-10): foto kendaraan dari HTML V2.1
+    # (docs/), sumber dan lisensi asli tidak diketahui. Ganti dengan foto
+    # armada milik perusahaan.
+    - assets/images/vehicles/
     - assets/fonts/OFL.txt
   # Plus Jakarta Sans 2.7.1 (tokotype), SIL OFL 1.1 — lihat assets/fonts/OFL.txt.
   fonts:
@@ -36,3 +41,5 @@ flutter:
           weight: 600
         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
           weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800

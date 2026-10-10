@@ -114,12 +114,14 @@ void main() {
       tester.getSize(find.byType(AnimatedContainer).first).width,
       greaterThan(tester.getSize(find.byType(AnimatedContainer).last).width),
     );
-    // Teks kartu ETA di putih.
-    for (final t in ['Kantor Pusat', '3 penumpang · 12,4 km', 'ETA']) {
-      expect(
-        contrast(color(t), MooverColors.surface),
-        greaterThanOrEqualTo(4.5),
-      );
+    // Kartu ETA dihapus atas keputusan pemilik project (2026-10-10).
+    for (final t in [
+      'Kantor Pusat',
+      '3 penumpang · 12,4 km',
+      'ETA',
+      '08.26 WIB',
+    ]) {
+      expect(find.text(t), findsNothing);
     }
   });
 
@@ -172,34 +174,33 @@ void main() {
     await expectSlide(tester, 2);
   });
 
-  testWidgets(
-    'semantik: judul header, titik berstatus, kartu ETA tersembunyi',
-    (tester) async {
-      final handle = tester.ensureSemantics();
-      await tester.pumpWidget(app());
-      expect(
-        tester.getSemantics(find.text(title(0))),
-        isSemantics(label: title(0), isHeader: true),
-      );
-      expect(
-        tester.getSemantics(dot(0)),
-        isSemantics(
-          label: 'Slide 1 dari 3',
-          isButton: true,
-          hasSelectedState: true,
-          isSelected: true,
-          hasTapAction: true,
-        ),
-      );
-      expect(
-        tester.getSemantics(dot(1)),
-        isSemantics(label: 'Slide 2 dari 3', isSelected: false),
-      );
-      expect(find.bySemanticsLabel(RegExp('ETA|Kantor Pusat')), findsNothing);
-      expect(find.bySemanticsLabel('Moover'), findsOneWidget);
-      handle.dispose();
-    },
-  );
+  testWidgets('semantik: judul header, titik berstatus, kartu ETA tidak ada', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(app());
+    expect(
+      tester.getSemantics(find.text(title(0))),
+      isSemantics(label: title(0), isHeader: true),
+    );
+    expect(
+      tester.getSemantics(dot(0)),
+      isSemantics(
+        label: 'Slide 1 dari 3',
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        hasTapAction: true,
+      ),
+    );
+    expect(
+      tester.getSemantics(dot(1)),
+      isSemantics(label: 'Slide 2 dari 3', isSelected: false),
+    );
+    expect(find.bySemanticsLabel(RegExp('ETA|Kantor Pusat')), findsNothing);
+    expect(find.bySemanticsLabel('Moover'), findsOneWidget);
+    handle.dispose();
+  });
 
   testWidgets('tidak overflow di layar 320x568dp, teks 200%', (tester) async {
     tester.view

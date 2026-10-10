@@ -14,3 +14,18 @@ class MooverLogo extends StatelessWidget {
     semanticLabel: 'Moover',
   );
 }
+
+/// Tanda loop Moover sebagai watermark dekoratif header navy (V2.1,
+/// 2026-10-10): `assets/brand/moover-mark.png`. Tidak dibaca pembaca layar.
+class MooverMark extends StatelessWidget {
+  const MooverMark({super.key, required this.opacity});
+
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/brand/moover-mark.png',
+    opacity: AlwaysStoppedAnimation(opacity),
+    excludeFromSemantics: true,
+  );
+}

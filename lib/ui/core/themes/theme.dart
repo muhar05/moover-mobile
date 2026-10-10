@@ -111,9 +111,8 @@ ThemeData mooverTheme() {
         // V2.1 danger: 6,03:1 di latar, 6,54:1 di surface.
         error: StatusTone.err.foreground,
       );
-  // V2.1: tombol tinggi 56, radius 16, label 16/800. ponytail: w800 tampil
-  // sebagai Bold (700) karena PlusJakartaSans-ExtraBold belum dibundel;
-  // tambahkan file + entri pubspec bila disetujui.
+  // V2.1: tombol tinggi 56, radius 16, label 16/800 (ExtraBold dibundel,
+  // disetujui pemilik project 2026-10-10).
   const buttonShape = RoundedRectangleBorder(
     borderRadius: BorderRadius.all(Radius.circular(MooverRadius.md)),
   );

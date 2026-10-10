@@ -4,6 +4,7 @@ import '../themes/theme.dart';
 
 /// Rute asal–tujuan: titik isi (asal) dan cincin (tujuan) dihubungkan garis
 /// vertikal; nama lokasi di samping titik, boleh membungkus beberapa baris.
+/// V2.1 Riwayat (2026-10-10): asal teks biasa, tujuan tebal (w800).
 /// Dibaca pembaca layar sebagai satu kalimat "Dari … ke …"; titik dan garis
 /// dekoratif tidak dibaca.
 ///
@@ -23,19 +24,18 @@ class MooverRouteTimeline extends StatelessWidget {
   final String destination;
   final bool onDark;
 
-  /// Gaya nama lokasi; bawaan bodyLarge w500. Warna ditentukan [onDark].
+  /// Gaya nama lokasi; bawaan bodyMedium (V2.1: 14). Warna ditentukan
+  /// [onDark]; asal w400, tujuan w800.
   final TextStyle? style;
 
   static const _dot = 10.0, _rail = 16.0, _gap = MooverSpace.md;
 
   @override
   Widget build(BuildContext context) {
-    final base =
-        style ??
-        Theme.of(context).textTheme.bodyLarge!
-            .copyWith(fontWeight: FontWeight.w500);
+    final base = style ?? Theme.of(context).textTheme.bodyMedium!;
     final textStyle = base.copyWith(
       color: onDark ? MooverColors.surface : MooverColors.text,
+      fontWeight: FontWeight.w400,
     );
     final dotColor = onDark ? MooverColors.sky : MooverColors.primary;
     final lineColor = onDark ? MooverColors.sky : MooverColors.blue500;
@@ -109,7 +109,12 @@ class MooverRouteTimeline extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: _gap),
-              Expanded(child: Text(destination, style: textStyle)),
+              Expanded(
+                child: Text(
+                  destination,
+                  style: textStyle.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
             ],
           ),
         ],

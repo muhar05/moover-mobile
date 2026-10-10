@@ -1,37 +1,35 @@
 import 'package:flutter/material.dart';
 
 import '../themes/theme.dart';
-import 'route_timeline.dart';
 import 'spread.dart';
 
 /// Kartu Agenda Hari Ini, diletakkan di header navy Beranda (V2.1,
 /// 2026-10-10; menggantikan kartu gradient). Isi: tanggal + pill status
-/// clock-in (garis amber), waktu trip berikutnya besar, rute, bar progres
-/// jam operasional. Bidang [fill] putih 8% di atas navy (#1A3869): putih
-/// 11,6:1, sky 7,6:1, amber 8,1:1, isi bar cyan 6,9:1 (nonteks). Hanya
-/// untuk latar navy.
+/// clock-in (garis amber), jam berjalan [clock] besar, bar progres jam
+/// operasional. Rute tidak ditampilkan (V2.1 Home; keputusan pemilik project
+/// 2026-10-10): trip berikutnya ditandai di daftar jadwal. Bidang [fill]
+/// putih 8% di atas navy (#1A3869): putih 11,6:1, sky 7,6:1, amber 8,1:1,
+/// isi bar cyan 6,9:1 (nonteks). Hanya untuk latar navy.
 /// Hanya menampilkan status; tidak ada aksi clock-in (aturan belum ada).
-/// ponytail: jam berjalan (detik) dan tombol "Clock in" di header V2 tidak
-/// dibuat: tanpa alur clock-in jam hanya dekorasi. Tambahkan saat aturan
-/// clock-in diputuskan (Q-B*).
+/// ponytail: tombol "Clock in" di header V2 tidak dibuat. Tambahkan saat
+/// aturan clock-in diputuskan (Q-B*).
 class MooverAgendaCard extends StatelessWidget {
   const MooverAgendaCard({
     super.key,
     required this.date,
+    required this.clock,
     required this.tripCount,
-    required this.nextTime,
-    required this.origin,
-    required this.destination,
     required this.clockInStatus,
     required this.operatingHours,
     required this.shiftProgress,
   });
 
   final String date;
+
+  /// Jam sekarang, sudah diformat (mis. "09.30.15"). Pemanggil yang
+  /// memperbaruinya tiap detik.
+  final String clock;
   final int tripCount;
-  final String nextTime;
-  final String origin;
-  final String destination;
   final String clockInStatus;
   final String operatingHours;
 
@@ -95,32 +93,22 @@ class MooverAgendaCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14), // V2.1: gap 14
-            MergeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Berikutnya',
-                    style: textTheme.labelLarge?.copyWith(color: muted),
-                  ),
-                  // V2.1: angka besar w600, tabular. displaySmall 36, bukan
-                  // 46 HTML: "09.30" harus muat 320dp pada teks 200%.
-                  Text(
-                    nextTime,
-                    style: textTheme.displaySmall?.copyWith(
-                      color: onCard,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: tabularFigures, // D2
-                    ),
-                  ),
-                  const SizedBox(height: MooverSpace.md),
-                  MooverRouteTimeline(
-                    origin: origin,
-                    destination: destination,
-                    onDark: true,
-                    style: textTheme.bodyMedium,
-                  ),
-                ],
+            // V2.1: 46/w600, tracking −0,02em, tabular (D2). Diperkecil
+            // (scaleDown) bila tidak muat: 320dp pada teks 200%. Tanpa
+            // liveRegion: tidak diumumkan tiap detik (aria-live off V2.1).
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                clock,
+                style: textTheme.displayMedium?.copyWith(
+                  fontSize: 46,
+                  height: 1,
+                  letterSpacing: -0.92,
+                  color: onCard,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: tabularFigures,
+                ),
               ),
             ),
             const SizedBox(height: 14),

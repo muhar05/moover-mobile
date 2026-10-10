@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,6 +7,11 @@ import '../core/themes/theme.dart';
 import '../core/widgets/widgets.dart';
 import '../login/login_screen.dart';
 import 'mock_data.dart';
+
+part 'account_tab.dart';
+part 'home_tab.dart';
+part 'reimburse_tab.dart';
+part 'trip_tab.dart';
 
 /// Main Menu: bottom navigation 4 tab (DESIGN.md §5.2, Usulan aktif UD1).
 /// Isi tab adalah kerangka dengan data MOCK/DEMO; belum ada API Terverifikasi
@@ -60,258 +67,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 }
 
-class _HomeTab extends StatelessWidget {
-  const _HomeTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return _TabPage(
-      header: _NavyHeader(
-        children: [
-          Row(
-            spacing: MooverSpace.md,
-            children: [
-              Expanded(
-                // Sapaan + nama dibaca sebagai satu judul.
-                child: MergeSemantics(
-                  child: Semantics(
-                    header: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Sapaan sky di navy 9,54:1.
-                        Text(
-                          'Halo,',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: MooverColors.sky,
-                          ),
-                        ),
-                        Text(
-                          demoDriverName,
-                          style: textTheme.titleLarge?.copyWith(
-                            color: MooverColors.surface,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // V2.1: avatar 48, ring 2, tepi navy 2.
-              const _Avatar(size: 48, ring: 2, border: MooverColors.navy),
-            ],
-          ),
-          MooverAgendaCard(
-            date: tripsToday.first.date,
-            tripCount: tripsToday.length,
-            nextTime: tripsToday.first.time,
-            origin: tripOrigin(tripsToday.first),
-            destination: tripDestination(tripsToday.first),
-            clockInStatus: 'Belum clock-in hari ini.',
-            operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
-            shiftProgress: _shiftProgress(TimeOfDay.now()),
-          ),
-        ],
-      ),
-      children: [
-        _Section(
-          title: 'Jadwal hari ini',
-          trailing: '${tripsToday.length} trip',
-          card: false,
-          children: [
-            for (final (i, t) in tripsToday.indexed) _TripItem(t, next: i == 0),
-          ],
-        ),
-        _Section(
-          title: 'Reimburse terakhir',
-          children: [_ReimburseItem(reimbursements.first)],
-        ),
-      ],
-    );
-  }
-}
-
-/// Posisi [now] di jam operasional 07.30–16.30 (KAK §5.1.2), 0–1.
-double _shiftProgress(TimeOfDay now) =>
-    ((now.hour * 60 + now.minute - 450) / 540).clamp(0, 1);
-
-class _TripTab extends StatefulWidget {
-  const _TripTab();
-
-  @override
-  State<_TripTab> createState() => _TripTabState();
-}
-
-class _TripTabState extends State<_TripTab> {
-  bool _history = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final dates = {for (final t in tripHistory) t.date};
-    return _TabPage(
-      title: 'Trip',
-      children: [
-        // DESIGN.md §5.2: segmen "Hari ini" (S06) dan "Riwayat" (S12).
-        SegmentedButton<bool>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: false, label: Text('Hari ini')),
-            ButtonSegment(value: true, label: Text('Riwayat')),
-          ],
-          selected: {_history},
-          onSelectionChanged: (s) => setState(() => _history = s.single),
-        ),
-        if (!_history)
-          _Section(
-            title: 'Jadwal hari ini',
-            trailing: '${tripsToday.length} trip',
-            card: false,
-            children: [
-              for (final (i, t) in tripsToday.indexed)
-                _TripItem(t, next: i == 0),
-            ],
-          )
-        else
-          // Riwayat dikelompokkan per tanggal (urutan data).
-          for (final date in dates)
-            _Section(
-              title: date,
-              trailing:
-                  '${tripHistory.where((t) => t.date == date).length} trip',
-              card: false,
-              children: [
-                for (final t in tripHistory.where((t) => t.date == date))
-                  _TripItem(t),
-              ],
-            ),
-      ],
-    );
-  }
-}
-
-class _ReimburseTab extends StatelessWidget {
-  const _ReimburseTab();
-
-  @override
-  Widget build(BuildContext context) => _TabPage(
-    title: 'Reimburse',
-    children: [
-      _Section(
-        title: 'Pengajuan',
-        trailing: '${reimbursements.length} item',
-        children: [for (final r in reimbursements) _ReimburseItem(r)],
-      ),
-    ],
-  );
-}
-
-class _AccountTab extends StatelessWidget {
-  const _AccountTab();
-
-  Future<void> _logout(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keluar dari akun?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Keluar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    // DESIGN.md S02: Login dimasuki dari Landing atau logout. Tidak ada sesi
-    // tersimpan yang perlu dihapus.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return _TabPage(
-      // V2.1 Settings: judul putih di navy, kartu profil menumpang 52dp di
-      // tepi bawah header.
-      header: _NavyHeader(
-        overlap: Card(
-          // Bayangan V2.1 (dekoratif): kartu berada di atas dua latar.
-          elevation: 8,
-          shadowColor: MooverColors.navy.withValues(alpha: 0.3),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(MooverRadius.lg)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(MooverSpace.lg),
-            child: Row(
-              spacing: 14,
-              children: [
-                const _Avatar(size: 64, ring: 3, border: MooverColors.surface),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        demoDriverName,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        'Employee ID: $demoEmployeeId',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: MooverColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              'Akun',
-              style: _titleStyle(context)
-                  ?.copyWith(color: MooverColors.surface),
-            ),
-          ),
-        ],
-      ),
-      children: [
-        // V2.1 "Log out": tint err + label err (5,86:1), tinggi 52. Varian
-        // destructive umum tetap Belum ditentukan; gaya ini khusus logout.
-        FilledButton.icon(
-          onPressed: () => _logout(context),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            backgroundColor: StatusTone.err.background,
-            foregroundColor: StatusTone.err.foreground,
-            textStyle: textTheme.titleSmall?.copyWith(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          icon: const Icon(Icons.logout),
-          label: const Text('Keluar'),
-        ),
-      ],
-    );
-  }
-}
+/// Layar S18–S21 dan S05 belum ada (Q-B8 Perlu konfirmasi): menu memberi
+/// tahu belum tersedia, bukan navigasi palsu.
+void _notYet(BuildContext context, String what) => ScaffoldMessenger.of(context)
+  ..hideCurrentSnackBar()
+  ..showSnackBar(SnackBar(content: Text('$what belum tersedia.')));
 
 /// V2.1: judul halaman 28/w800, tracking −0,02em.
 TextStyle? _titleStyle(BuildContext context) =>
@@ -322,13 +82,19 @@ TextStyle? _titleStyle(BuildContext context) =>
 double _topInset(BuildContext context) =>
     MediaQuery.paddingOf(context).top + MooverSpace.screen;
 
-/// Kerangka tab: judul besar di latar (atau [header] navy), lalu konten
-/// dengan jarak lega. Banner "Data contoh" (D10) dihapus atas keputusan
+/// Kerangka tab: judul besar di latar + [subtitle] muted opsional (atau
+/// [header] sendiri), lalu konten dengan jarak lega. Banner "Data contoh" (D10) dihapus atas keputusan
 /// pemilik project (2026-10-10); DESIGN.md belum diperbarui.
 class _TabPage extends StatelessWidget {
-  const _TabPage({this.title, this.header, required this.children});
+  const _TabPage({
+    this.title,
+    this.subtitle,
+    this.header,
+    required this.children,
+  });
 
   final String? title;
+  final String? subtitle;
   final Widget? header;
   final List<Widget> children;
 
@@ -344,9 +110,23 @@ class _TabPage extends StatelessWidget {
               MooverSpace.screen,
               0,
             ),
-            child: Semantics(
-              header: true,
-              child: Text(title!, style: _titleStyle(context)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6, // V2.1 (tab Trip)
+              children: [
+                // container: subjudul tidak ikut dibaca sebagai judul.
+                Semantics(
+                  container: true,
+                  header: true,
+                  child: Text(title!, style: _titleStyle(context)),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: MooverColors.textMuted),
+                  ),
+              ],
             ),
           ),
       Padding(
@@ -370,48 +150,66 @@ class _TabPage extends StatelessWidget {
 
 /// Header navy V2.1 sampai ke status bar (ikon status bar terang). Tanpa
 /// [overlap]: sudut bawah radius 32 (Beranda). Dengan [overlap]: widget itu
-/// menumpang 52dp di tepi bawah header (kartu profil Akun).
-/// ponytail: watermark logo 10% di header V2 tidak dibuat (dekoratif).
+/// menumpang 52dp di tepi bawah header (kartu profil Akun). Watermark tanda
+/// Moover 10% (V2.1, dekoratif) di kanan atas, terpotong bidang navy.
 class _NavyHeader extends StatelessWidget {
-  const _NavyHeader({required this.children, this.overlap});
+  const _NavyHeader({
+    required this.children,
+    required this.markTop,
+    this.overlap,
+  });
 
   final List<Widget> children;
+  final double markTop;
   final Widget? overlap;
 
   static const overlapExtent = 52.0;
 
   @override
-  Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
-    value: SystemUiOverlayStyle.light,
-    child: Stack(
-      children: [
-        Positioned.fill(
-          bottom: overlap == null ? 0 : overlapExtent,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: MooverColors.navy,
-              borderRadius: overlap == null
-                  ? const BorderRadius.vertical(bottom: Radius.circular(32))
-                  : null,
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            bottom: overlap == null ? 0 : overlapExtent,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: MooverColors.navy,
+                borderRadius: overlap == null
+                    ? const BorderRadius.vertical(bottom: Radius.circular(32))
+                    : null,
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -70,
+                    top: markTop,
+                    width: 260,
+                    child: const MooverMark(opacity: 0.10),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            MooverSpace.screen,
-            _topInset(context),
-            MooverSpace.screen,
-            overlap == null ? MooverSpace.screen : 0,
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              MooverSpace.screen,
+              _topInset(context),
+              MooverSpace.screen,
+              overlap == null ? MooverSpace.screen : 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 18, // V2.1: jarak isi header
+              children: [...children, ?overlap],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 18, // V2.1: jarak isi header
-            children: [...children, ?overlap],
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 /// Avatar inisial driver dengan ring gradient blue700 → cyan (V2.1) dan tepi
@@ -462,48 +260,23 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-/// Judul bagian + baris-baris. [card]: baris dibungkus satu kartu dan
-/// dipisah hairline (Reimburse); false: tiap baris sudah kartu sendiri
-/// (trip V2.1), ditumpuk dengan jarak.
+/// Judul bagian + kartu-kartu (trip, reimburse) ditumpuk dengan jarak.
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    this.trailing,
-    this.card = true,
-    required this.children,
-  });
+  const _Section({required this.title, this.trailing, required this.children});
 
   final String title;
   final String? trailing;
-  final bool card;
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    final rows = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: card ? 0 : MooverSpace.md,
-      children: [
-        for (final (i, child) in children.indexed) ...[
-          if (card && i > 0)
-            const Divider(
-              height: 1,
-              indent: MooverSpace.lg,
-              endIndent: MooverSpace.lg,
-            ),
-          child,
-        ],
-      ],
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: MooverSpace.md,
-      children: [
-        MooverSectionHeader(title, trailing: trailing),
-        card ? Card(child: rows) : rows,
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: MooverSpace.md,
+    children: [
+      MooverSectionHeader(title, trailing: trailing),
+      ...children,
+    ],
+  );
 }
 
 class _TripItem extends StatelessWidget {
@@ -513,10 +286,13 @@ class _TripItem extends StatelessWidget {
   final bool next;
 
   @override
+  // V2.1: jadwal hari ini = tujuan + alamat (Home); riwayat = rute asal →
+  // tujuan (Trip history). Pembeda: hanya jadwal hari ini punya alamat.
   Widget build(BuildContext context) => MooverTripItem(
     time: trip.time,
-    origin: tripOrigin(trip),
+    origin: trip.address == null ? tripOrigin(trip) : null,
     destination: tripDestination(trip),
+    address: trip.address,
     status: trip.status,
     tone: trip.tone,
     passengers: trip.passengers,

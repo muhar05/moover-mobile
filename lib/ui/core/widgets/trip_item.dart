@@ -6,8 +6,11 @@ import 'status_badge.dart';
 
 /// Kartu trip V2.1 (2026-10-10): kartu putih bertepi hairline (tema Card),
 /// kolom waktu 54dp (ikut skala teks) dengan garis pemisah, lalu badge
-/// (+ "Berikutnya" bila [next]), rute ([MooverRouteTimeline]), penumpang
-/// (opsional, muted 6,13:1 di putih). Dibaca TalkBack sebagai satu item.
+/// (+ "Berikutnya" bila [next]), tujuan, penumpang (opsional, muted 6,13:1 di
+/// putih). Dibaca TalkBack sebagai satu item.
+/// Tujuan mengikuti V2.1 (keputusan pemilik project 2026-10-10): dengan
+/// [origin] = rute [MooverRouteTimeline] (Riwayat); tanpa [origin] = nama
+/// tempat tebal + [address] muted maks. 2 baris (Jadwal hari ini, Home V2.1).
 /// ponytail: pemisah V2 putus-putus diganti garis solid hairline; tambahkan
 /// CustomPainter bila diminta. Chip "NEXT" V2 dipindah ke kolom kanan
 /// sebagai badge info: "Berikutnya" tidak muat di kolom 54dp.
@@ -15,8 +18,9 @@ class MooverTripItem extends StatelessWidget {
   const MooverTripItem({
     super.key,
     required this.time,
-    required this.origin,
+    this.origin,
     required this.destination,
+    this.address,
     required this.status,
     required this.tone,
     this.passengers,
@@ -24,8 +28,9 @@ class MooverTripItem extends StatelessWidget {
   });
 
   final String time;
-  final String origin;
+  final String? origin;
   final String destination;
+  final String? address;
   final String status;
   final StatusTone tone;
   final String? passengers;
@@ -79,10 +84,38 @@ class MooverTripItem extends StatelessWidget {
                           StatusBadge(label: status, tone: tone),
                         ],
                       ),
-                      MooverRouteTimeline(
-                        origin: origin,
-                        destination: destination,
-                      ),
+                      if (origin case final origin?)
+                        MooverRouteTimeline(
+                          origin: origin,
+                          destination: destination,
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: MooverSpace.xs,
+                          children: [
+                            // V2.1: 15/w800.
+                            Text(
+                              destination,
+                              semanticsLabel: 'Ke $destination',
+                              style: textTheme.titleSmall?.copyWith(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            if (address != null)
+                              Text(
+                                address!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontSize: 12.5, // V2.1
+                                  height: 1.45,
+                                  color: MooverColors.textMuted,
+                                ),
+                              ),
+                          ],
+                        ),
                       if (passengers != null)
                         Text(
                           passengers!,

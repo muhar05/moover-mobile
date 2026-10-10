@@ -1,64 +1,449 @@
-import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'dart:async';
 
-import '../core/widgets/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../core/themes/theme.dart';
 import '../login/login_screen.dart';
 
-/// S01 Landing (DESIGN.md §6.3, Usulan aktif; KAK §5.1.1). Copy, ilustrasi,
-/// dan motion adalah usulan pemilik project, belum dicatat di DESIGN.md.
-/// Register tidak ditampilkan: registrasi melalui admin (KAK §5.1.1).
-class LandingScreen extends StatelessWidget {
+/// S01 Landing (DESIGN.md §6.3, Usulan aktif; KAK §5.1.1). Register tidak
+/// ditampilkan: registrasi melalui admin (KAK §5.1.1).
+///
+/// Keputusan pemilik project 2026-10-10 (belum di DESIGN.md planning):
+/// mengikuti halaman Welcome V2.1, tanpa Skip dan "Create an account",
+/// ilustrasi Lottie diganti carousel foto autoplay, copy Bahasa Indonesia.
+class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
+
+  /// Jeda autoplay V2.1.
+  static const interval = Duration(milliseconds: 4500);
+
+  /// (foto, judul, isi). ponytail: foto placeholder Unsplash (lihat
+  /// pubspec.yaml); ganti file di assets/images/welcome/ dengan foto milik
+  /// perusahaan tanpa mengubah kode selain path ini.
+  static const slides = [
+    (
+      'assets/images/welcome/welcome_1_placeholder_unsplash_vFs-xMp6G7w.jpg',
+      'Driver andal untuk setiap perjalanan dinas',
+      'Clock-in, ikuti jadwal hari ini, dan laporkan setiap trip dari satu '
+          'aplikasi.',
+    ),
+    (
+      'assets/images/welcome/welcome_2_placeholder_unsplash_oh9FVFAWyvk.jpg',
+      'Antar-jemput pegawai tanpa repot',
+      'Bantu pegawai bepergian dengan aman dan nyaman di setiap perjalanan '
+          'dinas.',
+    ),
+    (
+      'assets/images/welcome/welcome_3_placeholder_unsplash_jb-LAz1hGog.jpg',
+      'Hari Anda sudah terencana',
+      'Lihat tugas, rute, dan penumpang lebih awal, tanpa bolak-balik chat.',
+    ),
+  ];
+
+  @override
+  State<LandingScreen> createState() => _LandingScreenState();
+}
+
+class _LandingScreenState extends State<LandingScreen> {
+  int _index = 0;
+  Timer? _timer;
+  // Pengguna menyentuh titik atau menggeser slide: autoplay berhenti.
+  bool _stopped = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  // Autoplay hanya bila tidak ada reduced motion, tidak ada pembaca layar
+  // (slide berganti sendiri mengganggu TalkBack), dan layar sedang tampil
+  // (TickerMode mati saat tertutup route Login).
+  void _syncTimer() {
+    final auto =
+        !_stopped &&
+        !MediaQuery.disableAnimationsOf(context) &&
+        !MediaQuery.accessibleNavigationOf(context) &&
+        TickerMode.valuesOf(context).enabled;
+    if (!auto) {
+      _timer?.cancel();
+      _timer = null;
+    } else {
+      _timer ??= Timer.periodic(
+        LandingScreen.interval,
+        (_) => _show(_index + 1),
+      );
+    }
+  }
+
+  void _show(int i) => setState(() => _index = i % LandingScreen.slides.length);
+
+  void _select(int i) {
+    _stopped = true;
+    _syncTimer();
+    _show(i);
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // Reduced motion (setelan aksesibilitas OS): frame pertama, statis.
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
+    final fade = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 600);
+    final (image, title, body) = LandingScreen.slides[_index];
+    // V2.1: bingkai foto min 240, maks 420; sisanya untuk teks dan tombol.
+    final photoHeight = (MediaQuery.sizeOf(context).height * 0.45).clamp(
+      240.0,
+      420.0,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: MooverColors.navy,
+        body: SafeArea(
+          bottom: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Ilustrasi dekoratif, diputar sekali lalu diam di frame
-                // terakhir (benchmark emulator: setelah ±2 dtk biayanya sama
-                // dengan statis). Controller milik Lottie, di-dispose bersama
-                // widget.
-                ExcludeSemantics(
-                  child: SizedBox(
-                    height: MediaQuery.sizeOf(context).height * 0.35,
-                    child: Lottie.asset(
-                      'assets/animations/driving.json',
-                      animate: !reduceMotion,
-                      repeat: false,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    MooverSpace.xl,
+                    MooverSpace.md,
+                    MooverSpace.xl,
+                    0,
+                  ),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Image.asset(
+                      'assets/brand/moover-logo-reverse.png',
+                      height: 30,
+                      semanticLabel: 'Moover',
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                Text(
-                  'Reliable Drivers for Every Business Trip',
-                  textAlign: TextAlign.center,
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                // Geser kiri/kanan untuk berpindah slide; titik di bawah adalah
+                // alternatif yang bisa diakses pembaca layar.
+                GestureDetector(
+                  // Aksi scroll tidak diekspos: titik sudah menjadi kontrolnya.
+                  excludeFromSemantics: true,
+                  onHorizontalDragEnd: (d) {
+                    final v = d.primaryVelocity ?? 0;
+                    if (v != 0) _select(_index + (v < 0 ? 1 : -1));
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          MooverSpace.screen,
+                          MooverSpace.screen,
+                          MooverSpace.screen,
+                          0,
+                        ),
+                        child: SizedBox(
+                          height: photoHeight,
+                          child: ClipRRect(
+                            // 28: radius bingkai foto V2.1, di luar skala.
+                            borderRadius: BorderRadius.circular(28),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: fade,
+                                  child: Image.asset(
+                                    image,
+                                    key: ValueKey(image),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    excludeFromSemantics: true,
+                                  ),
+                                ),
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      stops: const [0.45, 1],
+                                      colors: [
+                                        MooverColors.navy.withValues(alpha: 0),
+                                        MooverColors.navy.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const Positioned(
+                                  left: 14,
+                                  right: 14,
+                                  bottom: 14,
+                                  child: _EtaCard(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          MooverSpace.xl,
+                          28, // V2.1, di luar skala
+                          MooverSpace.xl,
+                          0,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 150),
+                          child: AnimatedSwitcher(
+                            duration: fade,
+                            layoutBuilder: (current, previous) => Stack(
+                              alignment: AlignmentDirectional.topStart,
+                              children: [...previous, ?current],
+                            ),
+                            child: Column(
+                              key: ValueKey(_index),
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              spacing: 10, // V2.1, di luar skala
+                              children: [
+                                Semantics(
+                                  container: true,
+                                  header: true,
+                                  child: Text(
+                                    title,
+                                    style: textTheme.headlineMedium!.copyWith(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.12,
+                                      letterSpacing: -0.75,
+                                      color: MooverColors.surface,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  body,
+                                  style: textTheme.bodyLarge!.copyWith(
+                                    fontSize: 15,
+                                    height: 1.55,
+                                    color: MooverColors.sky,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                // Teks utama (bodyLarge = onSurface), keterbacaan maksimal.
-                Text(
-                  'Manage driver attendance and ensure every trip runs on '
-                  'time and as scheduled.',
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge,
+                Padding(
+                  // Kotak sentuh 48 membuat titik pertama tampak sejajar teks.
+                  padding: const EdgeInsetsDirectional.only(
+                    start: MooverSpace.md,
+                    top: MooverSpace.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < LandingScreen.slides.length; i++)
+                        _Dot(
+                          index: i,
+                          active: i == _index,
+                          duration: fade,
+                          onTap: () => _select(i),
+                        ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-                PrimaryButton(
-                  label: 'Login',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LoginScreen(),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.only(bottom: MooverSpace.lg),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              MooverSpace.xl,
+              MooverSpace.lg,
+              MooverSpace.xl,
+              MooverSpace.sm,
+            ),
+            child: FilledButton(
+              // Cyan + label navy: 8,63:1.
+              style: FilledButton.styleFrom(
+                backgroundColor: MooverColors.cyan,
+                foregroundColor: MooverColors.navy,
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+              ),
+              child: const Text('Login'),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Indikator slide. V2.1: aktif 22×6 cyan, nonaktif 6×6. Penyimpangan:
+/// nonaktif #3D6CB8 (2,78:1 di navy) diganti sky (9,54:1) agar ≥3:1, dan
+/// area sentuh 32 → 48 (D9).
+class _Dot extends StatelessWidget {
+  const _Dot({
+    required this.index,
+    required this.active,
+    required this.duration,
+    required this.onTap,
+  });
+
+  final int index;
+  final bool active;
+  final Duration duration;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: active,
+      label: 'Slide ${index + 1} dari ${LandingScreen.slides.length}',
+      child: InkResponse(
+        onTap: onTap,
+        radius: 24,
+        child: SizedBox.square(
+          dimension: 48,
+          child: Center(
+            child: AnimatedContainer(
+              duration: duration,
+              width: active ? 22 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active ? MooverColors.cyan : MooverColors.sky,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu ETA dekoratif V2.1 di atas foto, data contoh statis. Dikecualikan
+/// dari semantik: bukan trip sungguhan. Skala teks dibatasi 1,3× agar kartu
+/// tetap di dalam bingkai foto pada teks 200%; teks kiri dipotong elipsis
+/// pada layar sempit (320 dp).
+class _EtaCard extends StatelessWidget {
+  const _EtaCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return ExcludeSemantics(
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: MooverColors.surface,
+            borderRadius: BorderRadius.circular(18), // V2.1, di luar skala
+            boxShadow: [
+              BoxShadow(
+                color: MooverColors.navy.withValues(alpha: 0.35),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14, // V2.1, di luar skala
+              vertical: MooverSpace.md,
+            ),
+            child: Row(
+              spacing: MooverSpace.md,
+              children: [
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: MooverColors.blueTint,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child: Icon(Icons.person, color: MooverColors.primary),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kantor Pusat',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleSmall!.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: MooverColors.text,
+                        ),
+                      ),
+                      // Slate di putih 6,13:1.
+                      Text(
+                        '3 penumpang · 12,4 km',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall!.copyWith(
+                          color: MooverColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ETA tetap utuh: lebar maks 96, di layar sempit + teks besar
+                // diperkecil; sisa lebar untuk teks kiri (elipsis).
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 96),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          spacing: 6, // V2.1, di luar skala
+                          children: [
+                            const DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: MooverColors.cyan,
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox.square(dimension: 7),
+                            ),
+                            // live di putih 7,1:1.
+                            Text(
+                              'ETA',
+                              style: textTheme.labelSmall!.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: StatusTone.live.foreground,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '08.26 WIB',
+                          style: textTheme.titleSmall!.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: MooverColors.text,
+                            fontFeatures: tabularFigures,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

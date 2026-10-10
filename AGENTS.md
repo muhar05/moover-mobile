@@ -29,7 +29,7 @@ Fase saat ini **frontend dengan data MOCK/DEMO**:
 | Layar | File | Catatan |
 |---|---|---|
 | S00 Splash | `lib/ui/splash/splash_screen.dart` | selalu lanjut ke Landing (cek sesi belum ada) |
-| S01 Landing | `lib/ui/landing/landing_screen.dart` | ilustrasi Lottie, hormati reduced motion |
+| S01 Landing | `lib/ui/landing/landing_screen.dart` | carousel foto autoplay (Welcome V2.1), tanpa autoplay saat reduced motion/TalkBack |
 | S02 Login | `lib/ui/login/login_screen.dart` | Employee ID + kata sandi, mock |
 | Main Menu | `lib/ui/main_menu/main_menu_screen.dart` | 4 tab: Beranda, Trip, Reimburse, Akun |
 
@@ -73,7 +73,7 @@ Aturan:
 | SDK | Flutter 3.47.1 / Dart 3.13.1 (`sdk: ^3.13.1`) |
 | UI | Material 3, tema custom `mooverTheme()` |
 | Font | Plus Jakarta Sans, dibundel di `assets/fonts/` (OFL) |
-| Animasi | `lottie` (satu-satunya dependency runtime) |
+| Animasi | bawaan Flutter (tanpa dependency runtime; `lottie` dihapus 2026-10-10) |
 | Lint | `flutter_lints` |
 | Test | `flutter_test` |
 | App ID | `com.siagaabdiutama.moover_driver` |
@@ -118,7 +118,7 @@ test/                    # mencerminkan lib/
   ui/core/design_system_test.dart  # token, kontras, komponen; ekspor helper contrast()
   ui/<fitur>/<fitur>_screen_test.dart
 assets/
-  animations/  brand/  fonts/
+  brand/  fonts/  images/welcome/ (foto PLACEHOLDER Unsplash, lihat pubspec.yaml)
 ```
 
 - Nama file `snake_case`; layar = `<fitur>_screen.dart`, kelas `<Fitur>Screen`.

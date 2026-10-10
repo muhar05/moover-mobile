@@ -118,7 +118,13 @@ ThemeData mooverTheme() {
     borderRadius: BorderRadius.all(Radius.circular(MooverRadius.md)),
   );
   const buttonSize = Size(64, 56);
-  const buttonLabel = TextStyle(fontSize: 16, fontWeight: FontWeight.w800);
+  // fontFamily wajib: textStyle tombol menggantikan gaya tema seluruhnya,
+  // tanpa ini label jatuh ke Roboto.
+  const buttonLabel = TextStyle(
+    fontFamily: mooverFontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+  );
   OutlineInputBorder inputBorder(Color color) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(MooverRadius.input),
     borderSide: BorderSide(color: color, width: 1.5),

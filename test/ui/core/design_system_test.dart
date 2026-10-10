@@ -281,6 +281,14 @@ void main() {
     ]) {
       expect(s!.fontFamily, mooverFontFamily);
     }
+    // Label tombol tema juga Plus Jakarta Sans (bukan Roboto).
+    final theme = mooverTheme();
+    for (final style in [
+      theme.filledButtonTheme.style,
+      theme.outlinedButtonTheme.style,
+    ]) {
+      expect(style!.textStyle!.resolve({})!.fontFamily, mooverFontFamily);
+    }
   });
 
   test('token spacing dan radius', () {

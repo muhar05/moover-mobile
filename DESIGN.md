@@ -47,7 +47,7 @@ Font: **Plus Jakarta Sans** dibundel di `assets/fonts/` (Regular, Medium 500, Se
 - **Main Menu** (UD1): 4 tab Beranda / Trip / Reimburse / Akun dalam `IndexedStack` (state tiap tab dipertahankan). Tanpa AppBar; judul tab `headlineMedium` ikut scroll, lalu jarak `xl`, antarbagian 28 dp.
 - **Bottom navigation** mengambang: bar putih radius `lg` 24, tepi hairline, shadow `text` 8% blur 24. Margin `md` dari tepi dan safe area. Tab aktif: ikon dalam pill g100 56×32, label w700 `text`, garis g500 16×3 di bawah. Tak aktif: `textMuted` w500. Tinggi tap ≥64 dp; label dibatasi 130% skala teks.
 - **Beranda**: sapaan "Halo," (`titleMedium` muted w500) + nama (`headlineMedium`), Kartu Agenda, "Jadwal hari ini", "Reimburse terakhir".
-- **Splash**: gradient #111111→g900→g500, logo di bidang putih, fade + scale 600 ms, total ±1,2 dtk. **Landing**: ilustrasi Lottie 35% tinggi layar, diputar sekali. Reduced motion: tanpa animasi.
+- **Splash**: gradient #111111→g900→g500, logo di bidang putih, fade + scale 600 ms, total ±1,2 dtk. **Landing** (Welcome V2.1, 2026-10-10): latar navy, carousel 3 foto autoplay 4,5 dtk crossfade 600 ms, berhenti saat titik disentuh/digeser. Reduced motion atau TalkBack: tanpa autoplay dan tanpa crossfade.
 - Tanpa banner "Data contoh" (dihapus 2026-10-10). Data mock ditandai di kode, bukan di UI.
 
 ## Komponen

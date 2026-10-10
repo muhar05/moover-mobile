@@ -1,69 +1,205 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lottie/lottie.dart';
 import 'package:moover_driver/ui/core/themes/theme.dart';
 import 'package:moover_driver/ui/landing/landing_screen.dart';
 import 'package:moover_driver/ui/login/login_screen.dart';
 
-Widget app({double textScale = 1, bool reduceMotion = false}) => MaterialApp(
+import '../core/design_system_test.dart' show contrast;
+
+Widget app({
+  double textScale = 1,
+  bool reduceMotion = false,
+  bool screenReader = false,
+}) => MaterialApp(
   theme: mooverTheme(),
   builder: (context, child) => MediaQuery(
     data: MediaQuery.of(context).copyWith(
       textScaler: TextScaler.linear(textScale),
       disableAnimations: reduceMotion,
+      accessibleNavigation: screenReader,
     ),
     child: child!,
   ),
   home: const LandingScreen(),
 );
 
+String title(int i) => LandingScreen.slides[i].$2;
+
+/// Judul slide yang tampil (setelah crossfade selesai).
+Future<void> expectSlide(WidgetTester tester, int i) async {
+  await tester.pump(); // frame pertama memulai jam crossfade
+  await tester.pump(const Duration(seconds: 1));
+  for (var j = 0; j < LandingScreen.slides.length; j++) {
+    expect(
+      find.text(title(j)),
+      j == i ? findsOneWidget : findsNothing,
+      reason: 'slide $i',
+    );
+  }
+}
+
+Finder dot(int i) => find.byWidgetPredicate(
+  (w) => w is Semantics && w.properties.label == 'Slide ${i + 1} dari 3',
+);
+
+/// Titik bisa berada di bawah lipatan pada layar pendek: gulir dulu.
+Future<void> tapDot(WidgetTester tester, int i) async {
+  await tester.ensureVisible(dot(i));
+  await tester.tap(dot(i));
+}
+
 void main() {
-  testWidgets('Login membuka LoginScreen; tanpa tombol Register', (
+  testWidgets('Login cyan membuka LoginScreen; tanpa Register/Skip/Create', (
     tester,
   ) async {
     await tester.pumpWidget(app());
-    expect(find.text('Register'), findsNothing);
+    for (final t in ['Register', 'Skip', 'Lewati', 'Create an account']) {
+      expect(find.text(t), findsNothing, reason: t);
+    }
+    final login = find.ancestor(
+      of: find.text('Login'),
+      matching: find.byType(FilledButton),
+    );
+    final style = tester.widget<FilledButton>(login).style!;
+    final bg = style.backgroundColor!.resolve({})!;
+    final fg = style.foregroundColor!.resolve({})!;
+    expect((bg, fg), (MooverColors.cyan, MooverColors.navy));
+    expect(contrast(fg, bg), greaterThanOrEqualTo(4.5));
+
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
   });
 
-  test('driving.json terbaca oleh parser lottie', () async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final c = await AssetLottie('assets/animations/driving.json').load();
-    expect(c.duration, greaterThan(Duration.zero));
-    expect(c.duration, lessThan(const Duration(seconds: 5)));
+  // Lottie dihapus atas keputusan pemilik project (2026-10-10): tes animasi
+  // driving.json diganti pemeriksaan ketiadaan.
+  test('Lottie dan driving.json sudah tidak ada', () {
+    expect(File('assets/animations/driving.json').existsSync(), isFalse);
+    expect(File('pubspec.yaml').readAsStringSync(), isNot(contains('lottie')));
   });
 
-  Future<void> loadComposition(WidgetTester tester) async {
-    // Muat aset (I/O nyata) lalu biarkan composition terpasang.
-    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
-    await tester.pump();
+  testWidgets('latar navy, status bar terang, teks kontras', (tester) async {
+    await tester.pumpWidget(app());
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      MooverColors.navy,
+    );
+    expect(
+      tester
+          .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+            find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
+          )
+          .value,
+      SystemUiOverlayStyle.light,
+    );
+    Color color(String t) => tester.widget<Text>(find.text(t)).style!.color!;
+    expect(color(title(0)), MooverColors.surface);
+    expect(color(LandingScreen.slides[0].$3), MooverColors.sky);
+    for (final t in [title(0), LandingScreen.slides[0].$3]) {
+      expect(contrast(color(t), MooverColors.navy), greaterThanOrEqualTo(4.5));
+    }
+    // Titik aktif (cyan, memanjang) dan nonaktif: nonteks ≥3:1 di navy.
+    final dots = tester
+        .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+        .map((d) => (d.decoration! as BoxDecoration).color!)
+        .toList();
+    expect(dots, [MooverColors.cyan, MooverColors.sky, MooverColors.sky]);
+    for (final c in dots) {
+      expect(contrast(c, MooverColors.navy), greaterThanOrEqualTo(3));
+    }
+    expect(
+      tester.getSize(find.byType(AnimatedContainer).first).width,
+      greaterThan(tester.getSize(find.byType(AnimatedContainer).last).width),
+    );
+    // Teks kartu ETA di putih.
+    for (final t in ['Kantor Pusat', '3 penumpang · 12,4 km', 'ETA']) {
+      expect(
+        contrast(color(t), MooverColors.surface),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
+  });
+
+  testWidgets('autoplay tiap 4,5 detik, berputar ke awal', (tester) async {
+    await tester.pumpWidget(app());
+    await expectSlide(tester, 0);
+    await tester.pump(LandingScreen.interval - const Duration(seconds: 1));
+    await expectSlide(tester, 1);
+    await tester.pump(LandingScreen.interval - const Duration(seconds: 1));
+    await expectSlide(tester, 2);
+    await tester.pump(LandingScreen.interval - const Duration(seconds: 1));
+    await expectSlide(tester, 0);
+  });
+
+  for (final (name, a) in [
+    ('reduced motion', app(reduceMotion: true)),
+    ('pembaca layar', app(screenReader: true)),
+  ]) {
+    testWidgets('tanpa autoplay saat $name; titik tetap berfungsi', (
+      tester,
+    ) async {
+      await tester.pumpWidget(a);
+      await tester.pump(LandingScreen.interval);
+      await expectSlide(tester, 0);
+      await tapDot(tester, 2);
+      await expectSlide(tester, 2);
+    });
   }
 
-  double progress(WidgetTester tester) =>
-      tester.widget<RawLottie>(find.byType(RawLottie)).progress;
-
-  testWidgets('animasi sekali lalu diam di frame terakhir', (tester) async {
+  testWidgets('autoplay berhenti setelah titik disentuh', (tester) async {
     await tester.pumpWidget(app());
-    await loadComposition(tester);
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(tester.binding.hasScheduledFrame, isTrue, reason: 'tidak jalan');
-    expect(progress(tester), inExclusiveRange(0, 1));
-
-    await tester.pump(const Duration(seconds: 5)); // melewati durasi 2 detik
-    await tester.pump();
-    expect(tester.binding.hasScheduledFrame, isFalse, reason: 'masih jalan');
-    expect(progress(tester), 1);
+    await tapDot(tester, 1);
+    await expectSlide(tester, 1);
+    await tester.pump(LandingScreen.interval);
+    await expectSlide(tester, 1);
   });
 
-  testWidgets('reduced motion: statis di frame pertama', (tester) async {
-    await tester.pumpWidget(app(reduceMotion: true));
-    await loadComposition(tester);
-    await tester.pump(const Duration(seconds: 1));
-    expect(tester.binding.hasScheduledFrame, isFalse);
-    expect(progress(tester), 0);
+  testWidgets('geser slide berpindah dan menghentikan autoplay', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    final photo = find.byType(ClipRRect);
+    await tester.fling(photo, const Offset(-300, 0), 1000);
+    await expectSlide(tester, 1);
+    await tester.fling(photo, const Offset(300, 0), 1000);
+    await expectSlide(tester, 0);
+    await tester.fling(photo, const Offset(300, 0), 1000);
+    await expectSlide(tester, 2);
+    await tester.pump(LandingScreen.interval);
+    await expectSlide(tester, 2);
   });
+
+  testWidgets(
+    'semantik: judul header, titik berstatus, kartu ETA tersembunyi',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(app());
+      expect(
+        tester.getSemantics(find.text(title(0))),
+        isSemantics(label: title(0), isHeader: true),
+      );
+      expect(
+        tester.getSemantics(dot(0)),
+        isSemantics(
+          label: 'Slide 1 dari 3',
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(
+        tester.getSemantics(dot(1)),
+        isSemantics(label: 'Slide 2 dari 3', isSelected: false),
+      );
+      expect(find.bySemanticsLabel(RegExp('ETA|Kantor Pusat')), findsNothing);
+      expect(find.bySemanticsLabel('Moover'), findsOneWidget);
+      handle.dispose();
+    },
+  );
 
   testWidgets('tidak overflow di layar 320x568dp, teks 200%', (tester) async {
     tester.view
@@ -79,6 +215,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('Login').hitTestable(), findsOneWidget);
+    expect(dot(2).hitTestable(), findsOneWidget);
   });
 
   testWidgets('target sentuh ≥48dp dan kontrol berlabel', (tester) async {

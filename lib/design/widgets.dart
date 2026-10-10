@@ -40,10 +40,15 @@ class MooverBottomNavigation extends StatelessWidget {
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 220);
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(MooverRadius.lg);
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      minimum: const EdgeInsets.fromLTRB(
+        MooverSpace.md,
+        0,
+        MooverSpace.md,
+        MooverSpace.md,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: radius,
@@ -123,7 +128,7 @@ class _NavButton extends StatelessWidget {
                       color: MooverColors.mist.withValues(
                         alpha: selected ? 1 : 0,
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(MooverRadius.md),
                     ),
                     child: Icon(
                       selected ? item.selectedIcon : item.icon,
@@ -131,14 +136,13 @@ class _NavButton extends StatelessWidget {
                       color: color,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: MooverSpace.xs),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       item.label,
                       maxLines: 1,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         fontWeight: selected
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -146,7 +150,7 @@ class _NavButton extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: MooverSpace.xs),
                   AnimatedContainer(
                     duration: duration,
                     curve: Curves.easeOutCubic,
@@ -181,14 +185,7 @@ class MooverSectionHeader extends StatelessWidget {
       header: true,
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+          Expanded(child: Text(title, style: textTheme.titleMedium)),
           if (trailing != null)
             Text(
               trailing!,
@@ -227,15 +224,14 @@ class MooverRouteTimeline extends StatelessWidget {
   /// Gaya nama lokasi; bawaan bodyLarge w500. Warna ditentukan [onDark].
   final TextStyle? style;
 
-  static const _dot = 10.0, _rail = 16.0, _gap = 12.0;
+  static const _dot = 10.0, _rail = 16.0, _gap = MooverSpace.md;
 
   @override
   Widget build(BuildContext context) {
     final base =
         style ??
-        Theme.of(context).textTheme.bodyLarge
-            ?.copyWith(fontWeight: FontWeight.w500) ??
-        const TextStyle(fontSize: 16);
+        Theme.of(context).textTheme.bodyLarge!
+            .copyWith(fontWeight: FontWeight.w500);
     final textStyle = base.copyWith(
       color: onDark ? MooverColors.surface : MooverColors.text,
     );
@@ -284,7 +280,7 @@ class MooverRouteTimeline extends StatelessWidget {
                 const SizedBox(width: _gap),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: MooverSpace.sm),
                     child: Text(origin, style: textStyle),
                   ),
                 ),
@@ -347,26 +343,26 @@ class MooverTripItem extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return MergeSemantics(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: MooverSpace.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
+              spacing: MooverSpace.sm,
               runSpacing: 6,
               children: [
                 Text(
                   time,
                   style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
                     fontFeatures: tabularFigures, // D2
                   ),
                 ),
                 StatusBadge(label: status, tone: tone),
               ],
             ),
+            // 10/6: komposisi optik waktu–rute–penumpang (sama dengan Agenda).
             const SizedBox(height: 10),
             MooverRouteTimeline(origin: origin, destination: destination),
             if (passengers != null) ...[
@@ -385,6 +381,229 @@ class MooverTripItem extends StatelessWidget {
   }
 }
 
+/// Baris yang sejajar kiri-kanan bila muat, turun ke baris baru bila tidak
+/// (teks 200% di layar 320dp).
+Widget _spread(Widget start, Widget end) => Wrap(
+  alignment: WrapAlignment.spaceBetween,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  spacing: MooverSpace.sm,
+  runSpacing: 6,
+  children: [start, end],
+);
+
+/// Kartu Agenda Hari Ini: satu-satunya blok berwarna di Beranda.
+/// Gradient steel → abyss; kontras terendah ada di ujung steel: putih
+/// 8,76:1, mist 6,60:1. Status clock-in: abyss di atas pill mist 13,6:1.
+/// Hanya menampilkan status; tidak ada aksi clock-in (aturan belum ada).
+class MooverAgendaCard extends StatelessWidget {
+  const MooverAgendaCard({
+    super.key,
+    required this.tripCount,
+    required this.nextTime,
+    required this.origin,
+    required this.destination,
+    required this.clockInStatus,
+    required this.operatingHours,
+  });
+
+  final int tripCount;
+  final String nextTime;
+  final String origin;
+  final String destination;
+  final String clockInStatus;
+  final String operatingHours;
+
+  static const gradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [MooverColors.steel, MooverColors.abyss],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    const onCard = MooverColors.surface;
+    const muted = MooverColors.mist;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(MooverRadius.card),
+      ),
+      // 18 di atas: kompensasi optik line height label; 20 = padding kartu.
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _spread(
+              Text(
+                'Agenda hari ini',
+                style: textTheme.labelLarge?.copyWith(color: muted),
+              ),
+              Text(
+                '$tripCount trip',
+                style: textTheme.titleSmall?.copyWith(color: onCard),
+              ),
+            ),
+            const SizedBox(height: MooverSpace.lg),
+            MergeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Berikutnya',
+                    style: textTheme.labelMedium?.copyWith(color: muted),
+                  ),
+                  // Ukuran sama dengan waktu di MooverTripItem.
+                  Text(
+                    nextTime,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: onCard,
+                      fontFeatures: tabularFigures, // D2
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  MooverRouteTimeline(
+                    origin: origin,
+                    destination: destination,
+                    onDark: true,
+                    style: textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            // Satu-satunya aksen teal (dekoratif).
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: MooverSpace.lg),
+              child: Divider(
+                height: 1,
+                color: MooverColors.teal.withValues(alpha: 0.5),
+              ),
+            ),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: MooverSpace.md,
+              runSpacing: MooverSpace.sm,
+              children: [
+                DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: muted,
+                    shape: StadiumBorder(),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: MooverSpace.md,
+                      vertical: 6, // pill ringkas, sama dengan badge
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const ExcludeSemantics(
+                          child: Icon(
+                            Icons.schedule,
+                            size: 18,
+                            color: MooverColors.abyss,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            clockInStatus,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: MooverColors.abyss,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Text(
+                  operatingHours,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    fontFeatures: tabularFigures,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Baris pengajuan reimburse (dipakai di Beranda dan tab Reimburse):
+/// ikon kategori, kategori + nominal, tanggal + badge status.
+class MooverReimburseItem extends StatelessWidget {
+  const MooverReimburseItem({
+    super.key,
+    required this.category,
+    required this.icon,
+    required this.amount,
+    required this.date,
+    required this.status,
+    required this.tone,
+  });
+
+  final String category;
+  final IconData icon;
+  final String amount;
+  final String date;
+  final String status;
+  final StatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.all(MooverSpace.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: MooverColors.background,
+              foregroundColor: MooverColors.primary,
+              child: Icon(icon, size: 20),
+            ),
+          ),
+          const SizedBox(width: MooverSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: MooverSpace.xs,
+              children: [
+                _spread(
+                  Text(category, style: textTheme.titleSmall),
+                  Text(
+                    amount,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontFeatures: tabularFigures, // D2
+                    ),
+                  ),
+                ),
+                _spread(
+                  Text(
+                    date,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: MooverColors.textMuted,
+                    ),
+                  ),
+                  StatusBadge(label: status, tone: tone),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Tombol aksi utama. Disetujui (D10): saat [busy], spinner tampil dan tombol
 /// tidak bisa ditekan sampai ada respons.
 class PrimaryButton extends StatelessWidget {
@@ -393,13 +612,11 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.busy = false,
-    this.icon,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool busy;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -407,6 +624,13 @@ class PrimaryButton extends StatelessWidget {
     if (busy) {
       return FilledButton.icon(
         onPressed: null,
+        // Usulan aktif (audit tombol 2026-10-10): busy = sedang diproses,
+        // label tetap terbaca. Abyss di atas mist 13,6:1; spinner (steel)
+        // 6,60:1. Nonaktif lain tetap bawaan M3.
+        style: FilledButton.styleFrom(
+          disabledBackgroundColor: MooverColors.mist,
+          disabledForegroundColor: MooverColors.abyss,
+        ),
         icon: const SizedBox.square(
           dimension: 18,
           child: CircularProgressIndicator(
@@ -414,13 +638,6 @@ class PrimaryButton extends StatelessWidget {
             semanticsLabel: 'Memproses',
           ),
         ),
-        label: text,
-      );
-    }
-    if (icon != null) {
-      return FilledButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
         label: text,
       );
     }
@@ -441,19 +658,21 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: 24),
-      // ponytail: padding belum ditentukan di DESIGN.md; ganti saat ada token spacing.
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      // Usulan aktif: 10 horizontal sengaja di luar skala (pill ringkas).
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: MooverSpace.xs,
+      ),
       decoration: ShapeDecoration(
         color: tone.background,
         shape: const StadiumBorder(),
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: tone.foreground,
-        ),
+        // labelMedium 12sp (UD3: ≥12sp). w600: pengecualian yang disengaja,
+        // bukan peran judul (w700).
+        style: Theme.of(context).textTheme.labelMedium
+            ?.copyWith(fontWeight: FontWeight.w600, color: tone.foreground),
       ),
     );
   }
@@ -504,18 +723,21 @@ class _StateMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(MooverSpace.xl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 40, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(height: 12),
+          const SizedBox(height: MooverSpace.md),
           Text(
             message,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge,
           ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
+          if (action != null) ...[
+            const SizedBox(height: MooverSpace.lg),
+            action!,
+          ],
         ],
       ),
     );
@@ -539,35 +761,4 @@ class SkeletonBox extends StatelessWidget {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
     ),
   );
-}
-
-/// Disetujui (D10): penanda layar yang memakai data mock.
-/// Warna memakai kandidat tone warn (belum final, D6).
-class MockDataBanner extends StatelessWidget {
-  const MockDataBanner({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const tone = StatusTone.warn;
-    return Container(
-      width: double.infinity,
-      color: tone.background,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, size: 18, color: tone.foreground),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Data contoh',
-              style: TextStyle(
-                color: tone.foreground,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

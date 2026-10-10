@@ -26,7 +26,6 @@ Widget harness(Widget child, {double textScale = 1}) => MaterialApp(
 Widget sampleComponents() => ListView(
   padding: const EdgeInsets.all(16),
   children: [
-    const MockDataBanner(),
     PrimaryButton(label: 'Kirim pengajuan reimburse', onPressed: () {}),
     const PrimaryButton(
       label: 'Kirim pengajuan reimburse',
@@ -160,7 +159,6 @@ void main() {
         Column(
           children: [
             PrimaryButton(label: 'Masuk', onPressed: () {}),
-            const MockDataBanner(),
             NavigationBar(
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.home), label: 'A'),
@@ -183,20 +181,61 @@ void main() {
           .color,
       MooverColors.surf,
     );
+  });
+
+  test('token typography: judul w700, font Plus Jakarta Sans', () {
+    final t = mooverTheme().textTheme;
+    for (final (name, s) in [
+      ('headlineMedium', t.headlineMedium),
+      ('titleLarge', t.titleLarge),
+      ('titleMedium', t.titleMedium),
+      ('titleSmall', t.titleSmall),
+    ]) {
+      expect(s!.fontWeight, FontWeight.w700, reason: name);
+    }
+    // Peran lain tetap bawaan M3 (tidak ikut tebal).
+    expect(t.bodyMedium!.fontWeight, isNot(FontWeight.w700));
+    expect(t.labelMedium!.fontWeight, isNot(FontWeight.w700));
+    for (final s in [
+      t.headlineMedium,
+      t.titleSmall,
+      t.bodySmall,
+      t.labelSmall,
+    ]) {
+      expect(s!.fontFamily, mooverFontFamily);
+    }
+  });
+
+  test('token spacing dan radius', () {
+    const space = [
+      MooverSpace.xs,
+      MooverSpace.sm,
+      MooverSpace.md,
+      MooverSpace.lg,
+      MooverSpace.xl,
+      MooverSpace.xxl,
+    ];
+    expect(space, [4, 8, 12, 16, 24, 32]);
+    expect(MooverSpace.screen, 20);
     expect(
-      tester
-          .widget<Container>(
-            find
-                .descendant(
-                  of: find.byType(MockDataBanner),
-                  matching: find.byType(Container),
-                )
-                .first,
-          )
-          .color,
-      StatusTone.warn.background,
-      reason: 'banner MOCK/DEMO tetap tone warn',
+      [MooverRadius.sm, MooverRadius.md, MooverRadius.card, MooverRadius.lg],
+      [12, 16, 20, 24],
     );
+    // Radius kartu tetap 20 (keputusan C), bukan 24.
+    final shape = mooverTheme().cardTheme.shape! as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(20));
+  });
+
+  testWidgets('StatusBadge: ≥12sp, w600 (pengecualian disengaja)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(const StatusBadge(label: 'Selesai', tone: StatusTone.ok)),
+    );
+    final style = tester.widget<Text>(find.text('Selesai')).style!;
+    expect(style.fontSize, greaterThanOrEqualTo(12));
+    expect(style.fontWeight, FontWeight.w600);
+    expect(style.color, StatusTone.ok.foreground);
   });
 
   testWidgets('PrimaryButton busy: spinner tampil dan tidak bisa ditekan', (
@@ -219,6 +258,71 @@ void main() {
     expect(taps, 1);
   });
 
+  testWidgets('PrimaryButton busy: label ≥4,5:1, semantik, ukuran tetap', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    Color fill() => tester
+        .widget<Material>(
+          find
+              .descendant(
+                of: find.byType(FilledButton),
+                matching: find.byType(Material),
+              )
+              .first,
+        )
+        .color!;
+    TextStyle label(String t) =>
+        DefaultTextStyle.of(tester.element(find.text(t))).style;
+
+    await tester.pumpWidget(
+      harness(
+        Center(
+          child: PrimaryButton(label: 'Kirim', busy: true, onPressed: () {}),
+        ),
+      ),
+    );
+    final busySize = tester.getSize(find.byType(FilledButton));
+    expect(fill(), MooverColors.mist);
+    expect(label('Kirim').color, MooverColors.abyss);
+    expect(contrast(label('Kirim').color!, fill()), greaterThanOrEqualTo(4.5));
+    expect(label('Kirim').fontWeight, FontWeight.w500);
+    // Pembaca layar: status memproses + label, tombol nonaktif.
+    expect(
+      tester.getSemantics(find.byType(FilledButton)),
+      isSemantics(
+        label: 'Memproses\nKirim',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+        hasTapAction: false,
+      ),
+    );
+
+    // Nonaktif karena alasan lain: tetap tampilan bawaan, bukan mist.
+    await tester.pumpWidget(
+      harness(
+        const Center(child: PrimaryButton(label: 'Kirim', onPressed: null)),
+      ),
+    );
+    // Elemen tombol dipakai ulang: warna dianimasikan, tunggu selesai.
+    await tester.pumpAndSettle();
+    expect(fill(), isNot(MooverColors.mist));
+    expect(label('Kirim').color, isNot(MooverColors.abyss));
+
+    // Tinggi tidak berubah (52dp ditunda); weight normal tetap 500.
+    await tester.pumpWidget(
+      harness(
+        Center(
+          child: PrimaryButton(label: 'Kirim', onPressed: () {}),
+        ),
+      ),
+    );
+    expect(tester.getSize(find.byType(FilledButton)).height, busySize.height);
+    expect(label('Kirim').fontWeight, FontWeight.w500);
+    handle.dispose();
+  });
+
   testWidgets('komponen tidak overflow pada skala teks 200% di layar 360dp', (
     tester,
   ) async {
@@ -239,6 +343,80 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     handle.dispose();
+  });
+
+  group('komponen berparameter', () {
+    // Data non-mock: memastikan nilai datang dari parameter, bukan konstanta.
+    Widget agenda() => const MooverAgendaCard(
+      tripCount: 7,
+      nextTime: '11.15 WIB',
+      origin: 'Gudang Timur Lantai Dua Pintu Barat',
+      destination: 'Terminal Kedatangan Internasional',
+      clockInStatus: 'Status X',
+      operatingHours: 'Jam Y',
+    );
+    Widget reimburse() => const MooverReimburseItem(
+      category: 'Kategori Z',
+      icon: Icons.toll_outlined,
+      amount: 'Rp 1.234.567',
+      date: '2 Jan 2027',
+      status: 'Status W',
+      tone: StatusTone.info,
+    );
+
+    testWidgets('data dari parameter tampil', (tester) async {
+      await tester.pumpWidget(
+        harness(Column(children: [agenda(), reimburse()])),
+      );
+      for (final t in [
+        '7 trip',
+        '11.15 WIB',
+        'Status X',
+        'Jam Y',
+        'Kategori Z',
+        'Rp 1.234.567',
+        '2 Jan 2027',
+        'Status W',
+      ]) {
+        expect(find.text(t), findsOneWidget, reason: t);
+      }
+      final route = tester.widget<MooverRouteTimeline>(
+        find.byType(MooverRouteTimeline),
+      );
+      expect(
+        (route.origin, route.destination, route.onDark),
+        (
+          'Gudang Timur Lantai Dua Pintu Barat',
+          'Terminal Kedatangan Internasional',
+          true,
+        ),
+      );
+      expect(
+        tester.widget<StatusBadge>(find.byType(StatusBadge)).tone,
+        StatusTone.info,
+      );
+    });
+
+    testWidgets('320dp, teks 200%: tanpa overflow', (tester) async {
+      tester.view
+        ..physicalSize = const Size(960, 1704)
+        ..devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        harness(
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(MooverSpace.screen),
+            child: Column(children: [agenda(), reimburse()]),
+          ),
+          textScale: 2,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.text('Rp 1.234.567')).right,
+        lessThanOrEqualTo(320),
+      );
+    });
   });
 
   group('MooverRouteTimeline', () {

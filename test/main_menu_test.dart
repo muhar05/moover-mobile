@@ -6,6 +6,8 @@ import 'package:moover_driver/screens/landing.dart';
 import 'package:moover_driver/screens/login.dart';
 import 'package:moover_driver/screens/main_menu.dart';
 
+import 'design_system_test.dart' show contrast;
+
 const tabs = ['Beranda', 'Trip', 'Reimburse', 'Akun'];
 
 Widget app({Widget home = const MainMenuPage(), double textScale = 1}) =>
@@ -62,8 +64,30 @@ void main() {
       await tester.pumpAndSettle();
       expect(selectedTab(tester), i);
       expect(find.text(content[label]!), findsOneWidget, reason: label);
-      // Data mock ditandai (D10).
-      expect(find.byType(MockDataBanner), findsOneWidget, reason: label);
+      // Banner MOCK/DEMO dihapus (keputusan 2026-10-10): tidak ada bidang
+      // kuning tone warn atau ikon ⓘ, termasuk di tab yang tidak tampil.
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              (w is Container && w.color == StatusTone.warn.background) ||
+              (w is DecoratedBox &&
+                  w.decoration is BoxDecoration &&
+                  (w.decoration as BoxDecoration).color ==
+                      StatusTone.warn.background),
+          skipOffstage: false,
+        ),
+        findsNothing,
+        reason: label,
+      );
+      expect(
+        find.byIcon(Icons.info_outline, skipOffstage: false),
+        findsNothing,
+        reason: label,
+      );
+      expect(
+        find.textContaining('Data contoh', skipOffstage: false),
+        findsNothing,
+      );
     }
   });
 
@@ -250,6 +274,132 @@ void main() {
     );
     handle.dispose();
   });
+
+  testWidgets(
+    'kartu agenda: data, gradient palet, kontras, tanpa aksi clock-in',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(app());
+      final agenda = find.byWidgetPredicate(
+        (w) =>
+            w is DecoratedBox &&
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).gradient != null,
+      );
+      expect(agenda, findsOneWidget);
+      Finder inAgenda(Finder f) => find.descendant(of: agenda, matching: f);
+
+      // Data mock tetap: jumlah, waktu, rute, status, jam operasional.
+      for (final t in [
+        'Agenda hari ini',
+        '2 trip',
+        'Berikutnya',
+        '09.30 WIB',
+        'Belum clock-in hari ini.',
+        'Jam operasional 07.30–16.30',
+      ]) {
+        expect(inAgenda(find.text(t)), findsOneWidget, reason: t);
+      }
+      final route = tester.widget<MooverRouteTimeline>(
+        inAgenda(find.byType(MooverRouteTimeline)),
+      );
+      expect(
+        (route.origin, route.destination, route.onDark),
+        ('Kantor Pusat', 'Kantor Cabang (contoh)', true),
+      );
+      // Urutan: label → waktu → rute → status.
+      double y(String t) => tester.getTopLeft(inAgenda(find.text(t))).dy;
+      final routeY = tester.getTopLeft(
+        inAgenda(find.byType(MooverRouteTimeline)),
+      );
+      expect(y('Agenda hari ini'), lessThan(y('09.30 WIB')));
+      expect(y('09.30 WIB'), lessThan(routeY.dy));
+      expect(routeY.dy, lessThan(y('Belum clock-in hari ini.')));
+
+      // Gradient hanya dari palet Aqua Nebula.
+      final gradient =
+          (tester.widget<DecoratedBox>(agenda).decoration as BoxDecoration)
+                  .gradient!
+              as LinearGradient;
+      const palette = [
+        MooverColors.abyss,
+        MooverColors.steel,
+        MooverColors.teal,
+        MooverColors.surf,
+        MooverColors.mist,
+      ];
+      expect(gradient.colors, everyElement(isIn(palette)));
+      // Radius sama dengan kartu biasa (20), bukan 24.
+      expect(
+        (tester.widget<DecoratedBox>(agenda).decoration as BoxDecoration)
+            .borderRadius,
+        BorderRadius.circular(MooverRadius.card),
+      );
+
+      // Kontras di setiap titik gradient: teks ≥4,5, indikator rute ≥3.
+      Color textColor(String t) =>
+          tester.widget<Text>(inAgenda(find.text(t))).style!.color!;
+      for (final stop in gradient.colors) {
+        for (final t in [
+          'Agenda hari ini',
+          '2 trip',
+          'Berikutnya',
+          '09.30 WIB',
+          'Jam operasional 07.30–16.30',
+          'Kantor Pusat',
+          'Kantor Cabang (contoh)',
+        ]) {
+          expect(
+            contrast(textColor(t), stop),
+            greaterThanOrEqualTo(4.5),
+            reason: '$t / $stop',
+          );
+        }
+        for (final c in [MooverColors.mist, MooverColors.surf]) {
+          expect(contrast(c, stop), greaterThanOrEqualTo(3), reason: 'rute');
+        }
+      }
+      // Status clock-in: teks di atas pill mist.
+      final pill = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: find.text('Belum clock-in hari ini.'),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      expect(
+        contrast(
+          textColor('Belum clock-in hari ini.'),
+          (pill.decoration as ShapeDecoration).color!,
+        ),
+        greaterThanOrEqualTo(4.5),
+      );
+
+      // Status saja: tidak ada tombol/aksi clock-in atau klaim berhasil.
+      expect(
+        inAgenda(
+          find.byWidgetPredicate(
+            (w) =>
+                w is InkWell || w is ButtonStyleButton || w is GestureDetector,
+          ),
+        ),
+        findsNothing,
+      );
+      expect(find.textContaining('berhasil'), findsNothing);
+
+      // Pembaca layar: waktu dan rute trip berikutnya dibaca berurutan.
+      expect(
+        tester.getSemantics(inAgenda(find.text('Berikutnya'))),
+        isSemantics(
+          label:
+              'Berikutnya\n09.30 WIB\n'
+              'Dari Kantor Pusat ke Kantor Cabang (contoh)',
+        ),
+      );
+      handle.dispose();
+    },
+  );
 
   testWidgets('semantik tab: tombol, label, status terpilih', (tester) async {
     final handle = tester.ensureSemantics();

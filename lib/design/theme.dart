@@ -54,6 +54,21 @@ enum StatusTone {
   final Color background;
 }
 
+// Usulan aktif (audit typography/spacing 2026-10-10), belum di DESIGN.md
+// (§4.3 "Belum ditentukan"). Skala kelipatan 4. Nilai lain (6, 10, 18, 28)
+// sengaja dipertahankan di tempat pemakaiannya untuk komposisi optik.
+abstract final class MooverSpace {
+  static const xs = 4.0, sm = 8.0, md = 12.0, lg = 16.0, xl = 24.0, xxl = 32.0;
+  // Padding horizontal layar. Baru Main Menu; Landing/Login (24) menyusul.
+  static const screen = 20.0;
+}
+
+// Usulan aktif, belum di DESIGN.md. card: kartu biasa dan Agenda (20, tetap);
+// lg: bar navigasi mengambang.
+abstract final class MooverRadius {
+  static const sm = 12.0, md = 16.0, card = 20.0, lg = 24.0;
+}
+
 // Disetujui (D2): font dibundel sebagai aset.
 const mooverFontFamily = 'PlusJakartaSans';
 
@@ -89,6 +104,15 @@ ThemeData mooverTheme() {
   return ThemeData(
     colorScheme: scheme,
     fontFamily: mooverFontFamily,
+    // Usulan aktif: peran judul tebal (w700) ditetapkan sekali di sini.
+    // Ukuran dan line height tetap bawaan M3. headlineSmall tidak diubah:
+    // dipakai judul dialog bawaan.
+    textTheme: const TextTheme(
+      headlineMedium: TextStyle(fontWeight: FontWeight.w700),
+      titleLarge: TextStyle(fontWeight: FontWeight.w700),
+      titleMedium: TextStyle(fontWeight: FontWeight.w700),
+      titleSmall: TextStyle(fontWeight: FontWeight.w700),
+    ),
     scaffoldBackgroundColor: MooverColors.background,
     // Disetujui (D9): target sentuh ≥48dp. Belum diuji di perangkat.
     materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -99,7 +123,7 @@ ThemeData mooverTheme() {
       color: MooverColors.surface,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: BorderRadius.all(Radius.circular(MooverRadius.card)),
         side: BorderSide(color: MooverColors.hairline),
       ),
     ),

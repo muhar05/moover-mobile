@@ -186,21 +186,25 @@ class _HomeTab extends StatelessWidget {
           children: [
             Text(
               'Halo,',
+              // Sapaan sengaja tidak tebal (tema: titleMedium w700).
               style: textTheme.titleMedium?.copyWith(
                 color: MooverColors.textMuted,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            Text(
-              demoDriverName,
-              style: textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text(demoDriverName, style: textTheme.headlineMedium),
           ],
         ),
       ),
       children: [
-        const _TodaySummary(),
+        MooverAgendaCard(
+          tripCount: _tripsToday.length,
+          nextTime: _tripsToday.first.time,
+          origin: _origin(_tripsToday.first),
+          destination: _destination(_tripsToday.first),
+          clockInStatus: 'Belum clock-in hari ini.',
+          operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
+        ),
         _Section(
           title: 'Jadwal hari ini',
           trailing: '${_tripsToday.length} trip',
@@ -212,93 +216,6 @@ class _HomeTab extends StatelessWidget {
           children: [_ReimburseItem(_reimbursements.first)],
         ),
       ],
-    );
-  }
-}
-
-/// Satu-satunya blok berwarna di Beranda: fokus agenda hari ini.
-/// Putih di atas steel 8,76:1; mist di atas steel 6,60:1.
-class _TodaySummary extends StatelessWidget {
-  const _TodaySummary();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final next = _tripsToday.first;
-    const onCard = MooverColors.surface;
-    const muted = MooverColors.mist;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: MooverColors.primary,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Agenda hari ini',
-              style: textTheme.labelLarge?.copyWith(color: muted),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${_tripsToday.length} trip',
-              style: textTheme.headlineSmall?.copyWith(
-                color: onCard,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Berikutnya ${next.time}',
-              style: textTheme.titleSmall?.copyWith(
-                color: onCard,
-                fontFeatures: tabularFigures, // D2
-              ),
-            ),
-            const SizedBox(height: 8),
-            MooverRouteTimeline(
-              origin: _origin(next),
-              destination: _destination(next),
-              onDark: true,
-              style: textTheme.bodyMedium,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Divider(height: 1, color: onCard.withValues(alpha: 0.2)),
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const ExcludeSemantics(
-                  child: Icon(Icons.schedule, size: 20, color: muted),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Belum clock-in hari ini.',
-                        style: textTheme.bodyMedium?.copyWith(color: onCard),
-                      ),
-                      // KAK §5.1.2.
-                      Text(
-                        'Jam operasional 07.30–16.30',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: muted,
-                          fontFeatures: tabularFigures,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -413,25 +330,15 @@ class _AccountTab extends StatelessWidget {
                 radius: 32,
                 backgroundColor: MooverColors.mist,
                 foregroundColor: MooverColors.abyss,
-                child: Text(
-                  initials,
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: Text(initials, style: textTheme.titleLarge),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: MooverSpace.lg),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    demoDriverName,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(demoDriverName, style: textTheme.titleLarge),
                   Text(
                     'Employee ID: $demoEmployeeId',
                     style: textTheme.bodyMedium?.copyWith(
@@ -453,8 +360,9 @@ class _AccountTab extends StatelessWidget {
   }
 }
 
-/// Kerangka tab: judul besar (atau [header]), banner "Data contoh" (D10),
-/// lalu konten dengan jarak lega.
+/// Kerangka tab: judul besar (atau [header]), lalu konten dengan jarak lega.
+/// Banner "Data contoh" (D10) dihapus atas keputusan pemilik project
+/// (2026-10-10); DESIGN.md belum diperbarui.
 class _TabPage extends StatelessWidget {
   const _TabPage({this.title, this.header, required this.children});
 
@@ -464,25 +372,25 @@ class _TabPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+    padding: const EdgeInsets.fromLTRB(
+      MooverSpace.screen,
+      MooverSpace.lg,
+      MooverSpace.screen,
+      MooverSpace.xl,
+    ),
     children: [
       header ??
           Semantics(
             header: true,
             child: Text(
               title!,
-              style: Theme.of(context).textTheme.headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
           ),
-      const SizedBox(height: 16),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: const MockDataBanner(),
-      ),
-      const SizedBox(height: 24),
+      const SizedBox(height: MooverSpace.xl),
       Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        // 28: jarak antarbagian, sengaja di antara xl dan xxl.
         spacing: 28,
         children: children,
       ),
@@ -512,14 +420,18 @@ class _Section extends StatelessWidget {
       children: [
         for (final (i, child) in children.indexed) ...[
           if (i > 0)
-            Divider(height: 1, indent: card ? 16 : 0, endIndent: card ? 16 : 0),
+            Divider(
+              height: 1,
+              indent: card ? MooverSpace.lg : 0,
+              endIndent: card ? MooverSpace.lg : 0,
+            ),
           child,
         ],
       ],
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: card ? 12 : 4,
+      spacing: card ? MooverSpace.md : MooverSpace.xs,
       children: [
         MooverSectionHeader(title, trailing: trailing),
         card ? Card(child: rows) : rows,
@@ -527,16 +439,6 @@ class _Section extends StatelessWidget {
     );
   }
 }
-
-/// Baris yang sejajar kiri-kanan bila muat, turun ke baris baru bila tidak
-/// (teks 200% di layar 320dp).
-Widget _spread(Widget start, Widget end) => Wrap(
-  alignment: WrapAlignment.spaceBetween,
-  crossAxisAlignment: WrapCrossAlignment.center,
-  spacing: 8,
-  runSpacing: 6,
-  children: [start, end],
-);
 
 class _TripItem extends StatelessWidget {
   const _TripItem(this.trip);
@@ -560,56 +462,12 @@ class _ReimburseItem extends StatelessWidget {
   final _Reimburse item;
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ExcludeSemantics(
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: MooverColors.background,
-              foregroundColor: MooverColors.primary,
-              child: Icon(item.icon, size: 20),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 4,
-              children: [
-                _spread(
-                  Text(
-                    item.category,
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    item.amount,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: tabularFigures, // D2
-                    ),
-                  ),
-                ),
-                _spread(
-                  Text(
-                    item.date,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: MooverColors.textMuted,
-                    ),
-                  ),
-                  StatusBadge(label: item.status, tone: item.tone),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MooverReimburseItem(
+    category: item.category,
+    icon: item.icon,
+    amount: item.amount,
+    date: item.date,
+    status: item.status,
+    tone: item.tone,
+  );
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lottie/lottie.dart';
-import 'package:moover_driver/design/theme.dart';
-import 'package:moover_driver/screens/landing.dart';
-import 'package:moover_driver/screens/login.dart';
+import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/landing/landing_screen.dart';
+import 'package:moover_driver/ui/login/login_screen.dart';
 
 Widget app({double textScale = 1, bool reduceMotion = false}) => MaterialApp(
   theme: mooverTheme(),
@@ -14,16 +14,18 @@ Widget app({double textScale = 1, bool reduceMotion = false}) => MaterialApp(
     ),
     child: child!,
   ),
-  home: const LandingPage(),
+  home: const LandingScreen(),
 );
 
 void main() {
-  testWidgets('Login membuka LoginPage; tanpa tombol Register', (tester) async {
+  testWidgets('Login membuka LoginScreen; tanpa tombol Register', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     expect(find.text('Register'), findsNothing);
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
-    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 
   test('driving.json terbaca oleh parser lottie', () async {

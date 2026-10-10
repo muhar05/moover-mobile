@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/design/theme.dart';
-import 'package:moover_driver/design/widgets.dart';
-import 'package:moover_driver/screens/landing.dart';
-import 'package:moover_driver/screens/splash.dart';
+import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/core/widgets/widgets.dart';
+import 'package:moover_driver/ui/landing/landing_screen.dart';
+import 'package:moover_driver/ui/splash/splash_screen.dart';
 
 class NavCount extends NavigatorObserver {
   int replaces = 0;
@@ -21,7 +21,7 @@ Widget app(NavCount nav, {bool reduceMotion = false}) => MaterialApp(
     data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
     child: child!,
   ),
-  home: const SplashPage(),
+  home: const SplashScreen(),
 );
 
 double contrast(Color a, Color b) {
@@ -38,7 +38,7 @@ void main() {
     expect(find.byType(MooverLogo), findsOneWidget);
     expect(find.bySemanticsLabel('Moover'), findsOneWidget);
 
-    final screen = tester.getSize(find.byType(SplashPage));
+    final screen = tester.getSize(find.byType(SplashScreen));
     final logo = tester.getRect(find.byType(MooverLogo));
     expect(logo.center.dx, closeTo(screen.width / 2, 1));
     expect(logo.center.dy, closeTo(screen.height / 2, 1));
@@ -63,11 +63,11 @@ void main() {
           w.decoration == const BoxDecoration(gradient: splashGradient),
     );
     expect(box, findsOneWidget);
-    expect(tester.getSize(box), tester.getSize(find.byType(SplashPage)));
+    expect(tester.getSize(box), tester.getSize(find.byType(SplashScreen)));
     expect(splashGradient.colors, const [
-      Color(0xFF061826),
-      Color(0xFF1C4E75),
-      Color(0xFF2FA0C6),
+      Color(0xFF111111),
+      Color(0xFF074A97),
+      Color(0xFF1A7AD6),
     ]);
     // Warna logo terbanyak ±#0040A0 di atas bidang putih.
     expect(
@@ -88,12 +88,12 @@ void main() {
       await tester.pumpWidget(app(nav));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1150));
-      expect(find.byType(LandingPage), findsNothing);
+      expect(find.byType(LandingScreen), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
-      expect(find.byType(LandingPage), findsOneWidget);
-      expect(find.byType(SplashPage), findsNothing);
+      expect(find.byType(LandingScreen), findsOneWidget);
+      expect(find.byType(SplashScreen), findsNothing);
       expect(nav.replaces, 1);
 
       // Back sistem: tidak ada route di bawah Landing.
@@ -103,14 +103,14 @@ void main() {
       );
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byType(SplashPage), findsNothing);
+      expect(find.byType(SplashScreen), findsNothing);
 
       // Kembali dari background tidak memutar ulang Splash.
       tester.binding
         ..handleAppLifecycleStateChanged(AppLifecycleState.paused)
         ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
-      expect(find.byType(SplashPage), findsNothing);
+      expect(find.byType(SplashScreen), findsNothing);
       expect(nav.replaces, 1);
     },
   );
@@ -123,7 +123,7 @@ void main() {
     // Hanya pembungkus logo di dalam Splash; transisi route dan FAB Scaffold
     // bukan animasi logo.
     Finder logoWrap(Type t) => find.descendant(
-      of: find.byType(SplashPage),
+      of: find.byType(SplashScreen),
       matching: find.ancestor(
         of: find.byType(MooverLogo),
         matching: find.byType(t),
@@ -133,8 +133,8 @@ void main() {
     expect(logoWrap(ScaleTransition), findsNothing);
     await tester.pump(); // post-frame: navigasi
     await tester.pump(); // transisi Duration.zero
-    expect(find.byType(LandingPage), findsOneWidget);
-    expect(find.byType(SplashPage), findsNothing);
+    expect(find.byType(LandingScreen), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
 
     await tester.pump(const Duration(seconds: 3));
     expect(nav.replaces, 1);

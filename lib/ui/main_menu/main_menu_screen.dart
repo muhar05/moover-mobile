@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 
-import '../design/theme.dart';
-import '../design/widgets.dart';
-import 'login.dart';
+import '../core/themes/theme.dart';
+import '../core/widgets/widgets.dart';
+import '../login/login_screen.dart';
+import 'mock_data.dart';
 
 /// Main Menu: bottom navigation 4 tab (DESIGN.md §5.2, Usulan aktif UD1).
 /// Isi tab adalah kerangka dengan data MOCK/DEMO; belum ada API Terverifikasi
 /// untuk data ini (API_CONTRACT.md). Gaya visual (Clean Bright): usulan
 /// pemilik project, belum dicatat di DESIGN.md.
-class MainMenuPage extends StatefulWidget {
-  const MainMenuPage({super.key});
+class MainMenuScreen extends StatefulWidget {
+  const MainMenuScreen({super.key});
 
   @override
-  State<MainMenuPage> createState() => _MainMenuPageState();
+  State<MainMenuScreen> createState() => _MainMenuScreenState();
 }
 
-class _MainMenuPageState extends State<MainMenuPage> {
+class _MainMenuScreenState extends State<MainMenuScreen> {
   static const _tabs = <MooverNavItem>[
     (label: 'Beranda', icon: Icons.home_outlined, selectedIcon: Icons.home),
     (
@@ -59,119 +60,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
   }
 }
 
-// MOCK/DEMO: data contoh untuk kerangka UI, bukan data server. Label status
-// dari DESIGN.md §4.7, tone dari Lampiran A.2. Format D4.
-typedef _Trip = ({
-  String date,
-  String time,
-  String route,
-  String? passengers,
-  String status,
-  StatusTone tone,
-});
-
-typedef _Reimburse = ({
-  String category,
-  IconData icon,
-  String amount,
-  String date,
-  String status,
-  StatusTone tone,
-});
-
-const _tripsToday = <_Trip>[
-  (
-    date: '9 Okt 2026',
-    time: '09.30 WIB',
-    route: 'Kantor Pusat → Kantor Cabang (contoh)',
-    passengers: '2 penumpang',
-    status: 'Terjadwal',
-    tone: StatusTone.neutral,
-  ),
-  (
-    date: '9 Okt 2026',
-    time: '13.00 WIB',
-    route: 'Kantor Cabang → Kantor Pusat (contoh)',
-    passengers: '1 penumpang',
-    status: 'Terjadwal',
-    tone: StatusTone.neutral,
-  ),
-];
-
-const _tripHistory = <_Trip>[
-  (
-    date: '8 Okt 2026',
-    time: '14.00 WIB',
-    route: 'Kantor Pusat → Bandara (contoh)',
-    passengers: null,
-    status: 'Selesai',
-    tone: StatusTone.ok,
-  ),
-  (
-    date: '8 Okt 2026',
-    time: '08.00 WIB',
-    route: 'Kantor Pusat → Kantor Cabang (contoh)',
-    passengers: null,
-    status: 'Menunggu Feedback',
-    tone: StatusTone.warn,
-  ),
-  (
-    date: '7 Okt 2026',
-    time: '10.00 WIB',
-    route: 'Kantor Cabang → Kantor Pusat (contoh)',
-    passengers: null,
-    status: 'Dibatalkan',
-    tone: StatusTone.err,
-  ),
-];
-
-// ponytail: data mock menyimpan rute sebagai "Asal → Tujuan"; dipecah di
-// sini tanpa mengubah datanya. Hapus saat data trip punya asal/tujuan
-// terpisah (kontrak API trip).
-List<String> _routeParts(_Trip t) {
-  final parts = t.route.split(' → ');
-  assert(parts.length == 2, 'rute mock harus "Asal → Tujuan": ${t.route}');
-  return parts;
-}
-
-String _origin(_Trip t) => _routeParts(t).first;
-String _destination(_Trip t) => _routeParts(t).last;
-
-const _reimbursements = <_Reimburse>[
-  (
-    category: 'Tol',
-    icon: Icons.toll_outlined,
-    amount: 'Rp 45.000',
-    date: '8 Okt 2026',
-    status: 'Diajukan',
-    tone: StatusTone.neutral,
-  ),
-  (
-    category: 'BBM',
-    icon: Icons.local_gas_station_outlined,
-    amount: 'Rp 300.000',
-    date: '6 Okt 2026',
-    status: 'Disetujui',
-    tone: StatusTone.info,
-  ),
-  (
-    category: 'Parkir',
-    icon: Icons.local_parking_outlined,
-    amount: 'Rp 20.000',
-    date: '3 Okt 2026',
-    status: 'Dibayar',
-    tone: StatusTone.ok,
-  ),
-  (
-    category: 'Lainnya',
-    icon: Icons.receipt_outlined,
-    amount: 'Rp 75.000',
-    date: '1 Okt 2026',
-    status: 'Ditolak',
-    tone: StatusTone.err,
-  ),
-];
-
 class _HomeTab extends StatelessWidget {
   const _HomeTab();
 
@@ -198,22 +86,22 @@ class _HomeTab extends StatelessWidget {
       ),
       children: [
         MooverAgendaCard(
-          tripCount: _tripsToday.length,
-          nextTime: _tripsToday.first.time,
-          origin: _origin(_tripsToday.first),
-          destination: _destination(_tripsToday.first),
+          tripCount: tripsToday.length,
+          nextTime: tripsToday.first.time,
+          origin: tripOrigin(tripsToday.first),
+          destination: tripDestination(tripsToday.first),
           clockInStatus: 'Belum clock-in hari ini.',
           operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
         ),
         _Section(
           title: 'Jadwal hari ini',
-          trailing: '${_tripsToday.length} trip',
+          trailing: '${tripsToday.length} trip',
           card: false,
-          children: [for (final t in _tripsToday) _TripItem(t)],
+          children: [for (final t in tripsToday) _TripItem(t)],
         ),
         _Section(
           title: 'Reimburse terakhir',
-          children: [_ReimburseItem(_reimbursements.first)],
+          children: [_ReimburseItem(reimbursements.first)],
         ),
       ],
     );
@@ -232,7 +120,7 @@ class _TripTabState extends State<_TripTab> {
 
   @override
   Widget build(BuildContext context) {
-    final dates = {for (final t in _tripHistory) t.date};
+    final dates = {for (final t in tripHistory) t.date};
     return _TabPage(
       title: 'Trip',
       children: [
@@ -249,9 +137,9 @@ class _TripTabState extends State<_TripTab> {
         if (!_history)
           _Section(
             title: 'Jadwal hari ini',
-            trailing: '${_tripsToday.length} trip',
+            trailing: '${tripsToday.length} trip',
             card: false,
-            children: [for (final t in _tripsToday) _TripItem(t)],
+            children: [for (final t in tripsToday) _TripItem(t)],
           )
         else
           // Riwayat dikelompokkan per tanggal (urutan data).
@@ -259,10 +147,10 @@ class _TripTabState extends State<_TripTab> {
             _Section(
               title: date,
               trailing:
-                  '${_tripHistory.where((t) => t.date == date).length} trip',
+                  '${tripHistory.where((t) => t.date == date).length} trip',
               card: false,
               children: [
-                for (final t in _tripHistory.where((t) => t.date == date))
+                for (final t in tripHistory.where((t) => t.date == date))
                   _TripItem(t),
               ],
             ),
@@ -280,8 +168,8 @@ class _ReimburseTab extends StatelessWidget {
     children: [
       _Section(
         title: 'Pengajuan',
-        trailing: '${_reimbursements.length} item',
-        children: [for (final r in _reimbursements) _ReimburseItem(r)],
+        trailing: '${reimbursements.length} item',
+        children: [for (final r in reimbursements) _ReimburseItem(r)],
       ),
     ],
   );
@@ -311,7 +199,7 @@ class _AccountTab extends StatelessWidget {
     // DESIGN.md S02: Login dimasuki dari Landing atau logout. Tidak ada sesi
     // tersimpan yang perlu dihapus.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
       (_) => false,
     );
   }
@@ -328,8 +216,8 @@ class _AccountTab extends StatelessWidget {
             ExcludeSemantics(
               child: CircleAvatar(
                 radius: 32,
-                backgroundColor: MooverColors.mist,
-                foregroundColor: MooverColors.abyss,
+                backgroundColor: MooverColors.g100,
+                foregroundColor: MooverColors.text,
                 child: Text(initials, style: textTheme.titleLarge),
               ),
             ),
@@ -443,13 +331,13 @@ class _Section extends StatelessWidget {
 class _TripItem extends StatelessWidget {
   const _TripItem(this.trip);
 
-  final _Trip trip;
+  final Trip trip;
 
   @override
   Widget build(BuildContext context) => MooverTripItem(
     time: trip.time,
-    origin: _origin(trip),
-    destination: _destination(trip),
+    origin: tripOrigin(trip),
+    destination: tripDestination(trip),
     status: trip.status,
     tone: trip.tone,
     passengers: trip.passengers,
@@ -459,7 +347,7 @@ class _TripItem extends StatelessWidget {
 class _ReimburseItem extends StatelessWidget {
   const _ReimburseItem(this.item);
 
-  final _Reimburse item;
+  final Reimburse item;
 
   @override
   Widget build(BuildContext context) => MooverReimburseItem(

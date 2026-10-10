@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/design/theme.dart';
-import 'package:moover_driver/design/widgets.dart';
-import 'package:moover_driver/screens/landing.dart';
-import 'package:moover_driver/screens/login.dart';
-import 'package:moover_driver/screens/main_menu.dart';
+import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/core/widgets/widgets.dart';
+import 'package:moover_driver/ui/landing/landing_screen.dart';
+import 'package:moover_driver/ui/login/login_screen.dart';
+import 'package:moover_driver/ui/main_menu/main_menu_screen.dart';
 
-import 'design_system_test.dart' show contrast;
+import '../core/design_system_test.dart' show contrast;
 
 const tabs = ['Beranda', 'Trip', 'Reimburse', 'Akun'];
 
-Widget app({Widget home = const MainMenuPage(), double textScale = 1}) =>
+Widget app({Widget home = const MainMenuScreen(), double textScale = 1}) =>
     MaterialApp(
       theme: mooverTheme(),
       builder: (context, child) => MediaQuery(
@@ -109,23 +109,23 @@ void main() {
   testWidgets('Landing → Login → Main Menu; Back tidak kembali ke Login', (
     tester,
   ) async {
-    await tester.pumpWidget(app(home: const LandingPage()));
+    await tester.pumpWidget(app(home: const LandingScreen()));
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, demoEmployeeId);
     await tester.enterText(find.byType(TextFormField).last, demoPassword);
     await tester.tap(find.text('Masuk'));
     await tester.pumpAndSettle();
-    expect(find.byType(MainMenuPage), findsOneWidget);
+    expect(find.byType(MainMenuScreen), findsOneWidget);
 
     final nav = tester.state<NavigatorState>(find.byType(Navigator));
     expect(nav.canPop(), isFalse, reason: 'Login/Landing masih di stack');
     // Back sistem: tidak ada route di bawahnya, app ditutup oleh OS.
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.byType(LoginPage), findsNothing);
-    expect(find.byType(LandingPage), findsNothing);
-    expect(find.byType(MainMenuPage), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byType(LandingScreen), findsNothing);
+    expect(find.byType(MainMenuScreen), findsOneWidget);
   });
 
   testWidgets('logout dengan konfirmasi kembali ke Login tanpa Back', (
@@ -139,14 +139,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Batal'));
     await tester.pumpAndSettle();
-    expect(find.byType(MainMenuPage), findsOneWidget);
+    expect(find.byType(MainMenuScreen), findsOneWidget);
 
     await tester.tap(find.text('Keluar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Keluar').last); // tombol di dialog
     await tester.pumpAndSettle();
-    expect(find.byType(LoginPage), findsOneWidget);
-    expect(find.byType(MainMenuPage), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(MainMenuScreen), findsNothing);
     expect(
       tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
       isFalse,
@@ -316,17 +316,19 @@ void main() {
       expect(y('09.30 WIB'), lessThan(routeY.dy));
       expect(routeY.dy, lessThan(y('Belum clock-in hari ini.')));
 
-      // Gradient hanya dari palet Aqua Nebula.
+      // Gradient hanya dari skala biru brand (web/D1).
       final gradient =
           (tester.widget<DecoratedBox>(agenda).decoration as BoxDecoration)
                   .gradient!
               as LinearGradient;
       const palette = [
-        MooverColors.abyss,
-        MooverColors.steel,
-        MooverColors.teal,
-        MooverColors.surf,
-        MooverColors.mist,
+        MooverColors.g900,
+        MooverColors.g700,
+        MooverColors.g600,
+        MooverColors.g500,
+        MooverColors.g300,
+        MooverColors.g100,
+        MooverColors.g50,
       ];
       expect(gradient.colors, everyElement(isIn(palette)));
       // Radius sama dengan kartu biasa (20), bukan 24.
@@ -355,11 +357,11 @@ void main() {
             reason: '$t / $stop',
           );
         }
-        for (final c in [MooverColors.mist, MooverColors.surf]) {
+        for (final c in [MooverColors.g100]) {
           expect(contrast(c, stop), greaterThanOrEqualTo(3), reason: 'rute');
         }
       }
-      // Status clock-in: teks di atas pill mist.
+      // Status clock-in: teks di atas pill g100.
       final pill = tester.widget<DecoratedBox>(
         find
             .ancestor(

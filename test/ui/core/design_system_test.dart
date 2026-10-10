@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/design/theme.dart';
-import 'package:moover_driver/design/widgets.dart';
+import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/core/widgets/widgets.dart';
 
 // Uji ini hanya mencakup pasangan warna dan komponen yang didefinisikan di
 // sini. Ini bukan uji aksesibilitas layar atau uji di perangkat.
@@ -91,19 +91,19 @@ void main() {
         s.primary,
         s.surfaceContainerHigh,
       ),
-      // Kartu agenda Beranda: teks di atas steel.
-      'surface/primary (kartu agenda)': (MooverColors.surface, s.primary),
-      'mist/primary (kartu agenda, teks sekunder)': (
-        MooverColors.mist,
-        s.primary,
+      // Kartu agenda Beranda: teks di atas ujung terang gradient (g700).
+      'surface/g700 (kartu agenda)': (MooverColors.surface, MooverColors.g700),
+      'g100/g700 (kartu agenda, teks sekunder)': (
+        MooverColors.g100,
+        MooverColors.g700,
       ),
       // Bottom navigation: label tak terpilih di atas putih; terpilih di
-      // atas pill mist (ikon).
+      // atas pill g100 (ikon).
       'textMuted/surface (nav tak terpilih)': (
         MooverColors.textMuted,
         MooverColors.surface,
       ),
-      'text/mist (ikon nav terpilih)': (MooverColors.text, MooverColors.mist),
+      'text/g100 (ikon nav terpilih)': (MooverColors.text, MooverColors.g100),
       // Segmen Trip terpilih.
       'surface/primary (segmen terpilih)': (MooverColors.surface, s.primary),
       // Splash: logo (±#0040A0) di atas bidang putih.
@@ -125,12 +125,12 @@ void main() {
       'outline/latar (OutlinedButton)': (s.outline, bg),
       'primary/surface (garis input fokus)': (s.primary, s.surface),
       'error/surface (garis input error)': (s.error, s.surface),
-      'garis teal/surface (indikator nav)': (
-        MooverColors.teal,
+      'garis g500/surface (indikator nav)': (
+        MooverColors.g500,
         MooverColors.surface,
       ),
       'outline/surface (tepi segmen)': (s.outline, s.surface),
-      'bidang logo/teal (Splash)': (MooverColors.surface, MooverColors.teal),
+      'bidang logo/g500 (Splash)': (MooverColors.surface, MooverColors.g500),
     };
     for (final MapEntry(:key, value: (fg, bg)) in pairs.entries) {
       expect(contrast(fg, bg), greaterThanOrEqualTo(3), reason: key);
@@ -138,12 +138,44 @@ void main() {
   });
 
   test('pasangan palet yang tidak boleh dipakai untuk teks (<4,5:1)', () {
-    // Dokumentasi: alasan teal/surf tidak dipakai sebagai warna teks.
+    // Dokumentasi: alasan g500/g300 tidak dipakai sebagai warna teks, dan
+    // alasan latar bukan #F5F6F5 web (muted gagal 4,5:1).
     const white = MooverColors.surface;
-    expect(contrast(MooverColors.teal, white), lessThan(4.5));
-    expect(contrast(MooverColors.surf, white), lessThan(3));
-    expect(contrast(white, MooverColors.teal), lessThan(4.5));
-    expect(contrast(MooverColors.steel, MooverColors.abyss), lessThan(3));
+    expect(contrast(MooverColors.g500, white), lessThan(4.5));
+    expect(contrast(MooverColors.g300, white), lessThan(3));
+    expect(contrast(white, MooverColors.g500), lessThan(4.5));
+    expect(contrast(MooverColors.text, MooverColors.g900), lessThan(3));
+    expect(
+      contrast(MooverColors.textMuted, const Color(0xFFF5F6F5)),
+      lessThan(4.5),
+    );
+  });
+
+  test('palet = web main.css: primary D1, skala biru, teks muted D5', () {
+    expect(
+      [
+        MooverColors.g900,
+        MooverColors.g700,
+        MooverColors.g600,
+        MooverColors.g500,
+        MooverColors.g300,
+        MooverColors.g100,
+        MooverColors.g50,
+      ],
+      const [
+        Color(0xFF074A97),
+        Color(0xFF0A5BB5),
+        Color(0xFF1167C4),
+        Color(0xFF1A7AD6),
+        Color(0xFF5AAEF0),
+        Color(0xFFB8DCFA),
+        Color(0xFFE8F2FD),
+      ],
+    );
+    expect(MooverColors.primary, MooverColors.g900);
+    expect(mooverTheme().colorScheme.primary, const Color(0xFF074A97));
+    expect(MooverColors.text, const Color(0xFF111111));
+    expect(MooverColors.textMuted, const Color(0xFF6B7280));
   });
 
   test('status tetap berbeda satu sama lain (tone tidak disamakan)', () {
@@ -179,7 +211,7 @@ void main() {
       tester
           .widget<NavigationIndicator>(find.byType(NavigationIndicator).first)
           .color,
-      MooverColors.surf,
+      MooverColors.g300,
     );
   });
 
@@ -283,8 +315,8 @@ void main() {
       ),
     );
     final busySize = tester.getSize(find.byType(FilledButton));
-    expect(fill(), MooverColors.mist);
-    expect(label('Kirim').color, MooverColors.abyss);
+    expect(fill(), MooverColors.g100);
+    expect(label('Kirim').color, MooverColors.text);
     expect(contrast(label('Kirim').color!, fill()), greaterThanOrEqualTo(4.5));
     expect(label('Kirim').fontWeight, FontWeight.w500);
     // Pembaca layar: status memproses + label, tombol nonaktif.
@@ -299,7 +331,7 @@ void main() {
       ),
     );
 
-    // Nonaktif karena alasan lain: tetap tampilan bawaan, bukan mist.
+    // Nonaktif karena alasan lain: tetap tampilan bawaan, bukan g100.
     await tester.pumpWidget(
       harness(
         const Center(child: PrimaryButton(label: 'Kirim', onPressed: null)),
@@ -307,8 +339,8 @@ void main() {
     );
     // Elemen tombol dipakai ulang: warna dianimasikan, tunggu selesai.
     await tester.pumpAndSettle();
-    expect(fill(), isNot(MooverColors.mist));
-    expect(label('Kirim').color, isNot(MooverColors.abyss));
+    expect(fill(), isNot(MooverColors.g100));
+    expect(label('Kirim').color, isNot(MooverColors.text));
 
     // Tinggi tidak berubah (52dp ditunda); weight normal tetap 500.
     await tester.pumpWidget(

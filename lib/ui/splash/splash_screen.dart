@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 
-import '../design/theme.dart';
-import '../design/widgets.dart';
-import 'landing.dart';
+import '../core/themes/theme.dart';
+import '../core/widgets/widgets.dart';
+import '../landing/landing_screen.dart';
 
-/// Gradient khusus Splash dari token palet Aqua Nebula. Layar lain memakai
-/// permukaan solid.
+/// Gradient khusus Splash: hitam → biru brand (gaya kartu gelap web). Layar
+/// lain memakai permukaan solid.
 const splashGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [MooverColors.abyss, MooverColors.steel, MooverColors.teal],
+  colors: [MooverColors.text, MooverColors.g900, MooverColors.g500],
   stops: [0, 0.6, 1],
 );
 
 /// S00 Splash: logo fade + scale 600 ms, total ±1,2 dtk, lalu Landing
 /// menggantikan route ini (Back tidak kembali ke Splash). Reduced motion:
 /// tanpa animasi dan tanpa jeda.
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   // Satu controller untuk seluruh 1,2 dtk; logo beranimasi di paruh pertama.
   // Ticker, bukan Timer: berhenti bersama dispose.
@@ -59,7 +59,7 @@ class _SplashPageState extends State<SplashPage>
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (_, _, _) => const LandingPage(),
+        pageBuilder: (_, _, _) => const LandingScreen(),
         transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: reduceMotion
@@ -80,8 +80,8 @@ class _SplashPageState extends State<SplashPage>
   Widget build(BuildContext context) {
     // ponytail: tinggi 64 dp (lebar ±192 dp, muat di layar 320 dp); ganti
     // bila DESIGN.md menetapkan ukuran logo Splash.
-    // Logo biru (±#0040A0) di atas gradient gelap hanya 1,1–3,1:1, jadi
-    // diberi bidang putih (9,4:1). Radius belum ditentukan di DESIGN.md.
+    // Logo biru (±#0040A0) di atas gradient hanya 1,1–2,1:1, jadi diberi
+    // bidang putih (9,4:1; bidang vs g500 4,38:1). Radius belum ditentukan di DESIGN.md.
     Widget logo = const DecoratedBox(
       decoration: BoxDecoration(
         color: MooverColors.surface,

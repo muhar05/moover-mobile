@@ -5,7 +5,7 @@ Aplikasi Moover Driver (Flutter).
 ## Login MOCK/DEMO (pengembangan)
 
 Belum ada autentikasi server. Login sementara memakai kredensial hardcode di
-`lib/screens/login.dart`:
+`lib/ui/login/login_screen.dart`:
 
 - Employee ID: `DEMO001`
 - Kata sandi: `demo1234`

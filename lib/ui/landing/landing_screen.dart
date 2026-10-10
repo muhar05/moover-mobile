@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
-import '../design/widgets.dart';
-import 'login.dart';
+import '../core/widgets/widgets.dart';
+import '../login/login_screen.dart';
 
 /// S01 Landing (DESIGN.md §6.3, Usulan aktif; KAK §5.1.1). Copy, ilustrasi,
 /// dan motion adalah usulan pemilik project, belum dicatat di DESIGN.md.
 /// Register tidak ditampilkan: registrasi melalui admin (KAK §5.1.1).
-class LandingPage extends StatelessWidget {
-  const LandingPage({super.key});
+class LandingScreen extends StatelessWidget {
+  const LandingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,9 @@ class LandingPage extends StatelessWidget {
                 PrimaryButton(
                   label: 'Login',
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LoginScreen(),
+                    ),
                   ),
                 ),
               ],

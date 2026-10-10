@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../design/theme.dart';
-import '../design/widgets.dart';
-import 'main_menu.dart';
+import '../core/themes/theme.dart';
+import '../core/widgets/widgets.dart';
+import '../main_menu/main_menu_screen.dart';
 
 // MOCK/DEMO: kredensial hardcode sementara, bukan autentikasi. Tidak ada
 // server, token, atau sesi tersimpan.
@@ -11,7 +11,7 @@ const demoEmployeeId = 'DEMO001';
 const demoPassword = 'demo1234';
 const demoDriverName = 'Driver Demo';
 
-// Label normal memakai teks utama (abyss); warna fokus (primary) dan error
+// Label normal memakai teks utama (#111111); warna fokus (primary) dan error
 // tetap dari tema. Diuji ≥4,5:1 di test/login_test.dart.
 final _labelStyle = WidgetStateTextStyle.resolveWith(
   (s) => s.contains(WidgetState.focused) || s.contains(WidgetState.error)
@@ -22,14 +22,14 @@ final _labelStyle = WidgetStateTextStyle.resolveWith(
 /// S02 Login (DESIGN.md §6.3, Usulan aktif). Employee ID + password; akun
 /// dibuat admin (KAK §5.1.1). Lupa password: Perlu konfirmasi (Q-B8), tidak
 /// ditampilkan. Text field memakai bawaan M3 (gaya input Belum ditentukan).
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _employeeId = TextEditingController();
   final _password = TextEditingController();
@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
     }
     // Hapus Landing dan Login dari stack: Back dari Main Menu menutup app.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const MainMenuPage()),
+      MaterialPageRoute<void>(builder: (_) => const MainMenuScreen()),
       (_) => false,
     );
   }

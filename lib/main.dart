@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'design/theme.dart';
-import 'screens/splash.dart';
+import 'ui/core/themes/theme.dart';
+import 'ui/splash/splash_screen.dart';
 
 void main() {
   // Lisensi OFL font yang dibundel, agar tampil di halaman lisensi aplikasi.
@@ -25,7 +25,7 @@ class MainApp extends StatelessWidget {
       theme: mooverTheme(),
       // ponytail: Splash belum mengecek sesi (menunggu kontrak sesi); selalu
       // lanjut ke Landing.
-      home: const SplashPage(),
+      home: const SplashScreen(),
     );
   }
 }

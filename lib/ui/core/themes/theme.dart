@@ -4,33 +4,34 @@ import 'package:flutter/material.dart';
 // `moover-mobile-planning/DESIGN.md`: "Disetujui" = final; "Usulan aktif" =
 // nilai sementara, ubah hanya di file ini.
 //
-// Palet Aqua Nebula (usulan pemilik project 2026-10-09) menggantikan biru D1
-// (#074A97), teks muted D5 (#6B7280), dan latar/teks UD3. Belum dicatat di
-// DESIGN.md. Rasio kontras di komentar = hitungan WCAG, diuji di
-// test/design_system_test.dart.
+// Palet mengikuti web dashboard (`moover-web/.../src/assets/main.css`) dan
+// D1 (Disetujui): primary #074A97 + skala biru g*. Teks utama #111111
+// (Usulan aktif), teks sekunder #6B7280 (D5). Rasio kontras di komentar =
+// hitungan WCAG, diuji di test/ui/core/design_system_test.dart.
 
 abstract final class MooverColors {
-  // Palet sumber. Jangan dipakai langsung untuk teks tanpa cek kontras:
-  // teal 3,02:1 dan surf 1,90:1 terhadap putih (gagal untuk teks normal).
-  static const abyss = Color(0xFF061826); // Midnight Abyss
-  static const steel = Color(0xFF1C4E75); // Atlantic Steel
-  static const teal = Color(0xFF2FA0C6); // Tidepool Teal
-  static const surf = Color(0xFF58C9F3); // Summer Surf
-  static const mist = Color(0xFFBDE5FF); // Glacier Mist
+  // Skala biru brand (nama token sama dengan web). Jangan dipakai untuk teks
+  // tanpa cek kontras: g500 4,38:1 dan g300 2,40:1 terhadap putih.
+  static const g900 = Color(0xFF074A97);
+  static const g700 = Color(0xFF0A5BB5);
+  static const g600 = Color(0xFF1167C4);
+  static const g500 = Color(0xFF1A7AD6);
+  static const g300 = Color(0xFF5AAEF0);
+  static const g100 = Color(0xFFB8DCFA);
+  static const g50 = Color(0xFFE8F2FD);
 
   // Semantik.
-  static const primary = steel; // putih di atasnya 8,76:1
-  static const text = abyss; // 16,7:1 di latar, 18,0:1 di surface
-  // Turunan steel yang lebih terang (bukan warna palet): teks sekunder,
-  // garis input, outline. 6,00:1 di latar, 6,46:1 di surface.
-  static const textMuted = Color(0xFF46617A);
-  // Glacier Mist 25% di atas putih: latar lembut. Mist penuh membuat kartu
-  // putih nyaris tak terbedakan (1,33:1) dan muted turun ke 4,86:1.
-  static const background = Color(0xFFEEF8FF);
+  static const primary = g900; // putih di atasnya 8,62:1
+  static const text = Color(0xFF111111); // 17,7:1 di latar, 18,9:1 di surface
+  // D5. 4,54:1 di latar, 4,83:1 di surface.
+  static const textMuted = Color(0xFF6B7280);
+  // Panel web #F5F6F5 sedikit dicerahkan: muted di atas #F5F6F5 hanya
+  // 4,46:1 (gagal D9). Keputusan pemilik project 2026-10-10.
+  static const background = Color(0xFFF7F8F7);
   static const surface = Color(0xFFFFFFFF);
-  // Garis pemisah dekoratif (divider, tepi kartu). Bukan batas kontrol, jadi
-  // tidak wajib 3:1; batas kontrol (input, tombol outline) memakai outline.
-  static const hairline = Color(0xFFD7E6F2);
+  // Garis pemisah dekoratif (divider, tepi kartu), --border web. Bukan batas
+  // kontrol, jadi tidak wajib 3:1; batas kontrol memakai outline.
+  static const hairline = Color(0xFFE4E7E4);
 }
 
 /// Tone warna status. Disetujui (prinsip) D6: makna tone mengikuti web.
@@ -39,13 +40,12 @@ abstract final class MooverColors {
 /// sampai ≥4,5:1 terhadap [background] menurut hitungan WCAG. Belum diuji di
 /// perangkat, belum final. Web asli: ok #2E8B57, warn #B7860B, err #E0524D,
 /// info #2563EB, neutral #6B7280. Hijau/kuning/merah sengaja tidak diganti
-/// palet agar status tetap mudah dibedakan; info memakai steel + mist tipis
-/// (lebih jauh dari indigo dibanding biru web).
+/// palet agar status tetap mudah dibedakan.
 enum StatusTone {
   ok(Color(0xFF287A4C), Color(0xFFE6F4EA)),
   warn(Color(0xFF8E6809), Color(0xFFFFF6DC)),
   err(Color(0xFFCA2923), Color(0xFFFDE8E7)),
-  info(MooverColors.steel, Color(0xFFDDF0FF)),
+  info(Color(0xFF1759EA), Color(0xFFE8EFFD)),
   indigo(Color(0xFF4F46E5), Color(0xFFECEBFD)),
   neutral(Color(0xFF656C79), Color(0xFFF0F1F0));
 
@@ -78,27 +78,30 @@ const tabularFigures = [FontFeature.tabularFigures()];
 ThemeData mooverTheme() {
   final scheme =
       ColorScheme.fromSeed(
-        // Seed steel: warna turunan M3 (surfaceContainer dialog/nav bar)
-        // ikut keluarga Aqua Nebula. Tanpa dark mode di v1 (UD3).
-        seedColor: MooverColors.steel,
+        // Seed #074A97 (UD3): warna turunan M3 (surfaceContainer dialog/nav
+        // bar) ikut keluarga biru brand. Tanpa dark mode di v1 (UD3).
+        seedColor: MooverColors.primary,
       ).copyWith(
         primary: MooverColors.primary,
         onPrimary: MooverColors.surface,
-        // Container lembut: abyss di atas mist 13,6:1.
-        primaryContainer: MooverColors.mist,
-        onPrimaryContainer: MooverColors.abyss,
-        // Aksen: teks di atas teal harus abyss (5,97:1), bukan putih (3,02:1).
-        secondary: MooverColors.teal,
-        onSecondary: MooverColors.abyss,
-        // Elemen terpilih (indikator M3 bawaan): abyss 9,49:1.
-        secondaryContainer: MooverColors.surf,
-        onSecondaryContainer: MooverColors.abyss,
+        // Container lembut: teks di atas g100 13,2:1.
+        primaryContainer: MooverColors.g100,
+        onPrimaryContainer: MooverColors.text,
+        // Aksen g700: putih 6,61:1 (g500 hanya 4,38:1).
+        secondary: MooverColors.g700,
+        onSecondary: MooverColors.surface,
+        // Elemen terpilih (indikator M3 bawaan): teks di atas g300 7,87:1.
+        secondaryContainer: MooverColors.g300,
+        onSecondaryContainer: MooverColors.text,
         surface: MooverColors.surface,
+        // Turunan seed #074A97 terlalu gelap untuk muted D5 (4,15:1); samakan
+        // dengan latar (4,54:1). Dipakai NavigationBar/menu bawaan M3.
+        surfaceContainer: MooverColors.background,
         onSurface: MooverColors.text,
         onSurfaceVariant: MooverColors.textMuted,
         outline: MooverColors.textMuted,
         outlineVariant: MooverColors.hairline, // warna bawaan Divider
-        // error tetap bawaan M3 #BA1A1A: 6,00:1 di latar, 6,46:1 di surface.
+        // error tetap bawaan M3 #BA1A1A: 6,07:1 di latar, 6,46:1 di surface.
       );
 
   return ThemeData(
@@ -135,7 +138,7 @@ ThemeData mooverTheme() {
     ),
     // Dialog putih polos, bukan tint M3: teks dan tombol diuji di atas surface.
     dialogTheme: const DialogThemeData(backgroundColor: MooverColors.surface),
-    // Segmen terpilih steel + teks putih (8,76:1); tepi outline (6,46:1).
+    // Segmen terpilih primary + teks putih (8,62:1); tepi outline (4,83:1).
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         backgroundColor: MooverColors.surface,

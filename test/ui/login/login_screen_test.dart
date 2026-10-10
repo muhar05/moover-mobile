@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/design/theme.dart';
-import 'package:moover_driver/screens/login.dart';
-import 'package:moover_driver/screens/main_menu.dart';
+import 'package:moover_driver/ui/core/themes/theme.dart';
+import 'package:moover_driver/ui/login/login_screen.dart';
+import 'package:moover_driver/ui/main_menu/main_menu_screen.dart';
 
 double contrast(Color a, Color b) {
   final la = a.computeLuminance(), lb = b.computeLuminance();
@@ -20,7 +20,7 @@ Widget app({double textScale = 1}) => MaterialApp(
         .copyWith(textScaler: TextScaler.linear(textScale)),
     child: child!,
   ),
-  home: const LoginPage(),
+  home: const LoginScreen(),
 );
 
 void main() {
@@ -52,8 +52,8 @@ void main() {
       await tester.tap(find.text('Masuk'));
       await tester.pumpAndSettle();
       expect(find.text(wrongCredentials), findsOneWidget, reason: '$id/$pw');
-      expect(find.byType(LoginPage), findsOneWidget);
-      expect(find.byType(MainMenuPage), findsNothing);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(MainMenuScreen), findsNothing);
     }
   });
 
@@ -64,8 +64,8 @@ void main() {
     await tester.enterText(find.byType(TextFormField).last, demoPassword);
     await tester.tap(find.text('Masuk'));
     await tester.pumpAndSettle();
-    expect(find.byType(MainMenuPage), findsOneWidget);
-    expect(find.byType(LoginPage), findsNothing);
+    expect(find.byType(MainMenuScreen), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
   });
 
   testWidgets('kata sandi bisa ditampilkan dan disembunyikan', (tester) async {

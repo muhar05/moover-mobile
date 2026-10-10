@@ -4,8 +4,10 @@ import '../themes/theme.dart';
 
 typedef MooverNavItem = ({String label, IconData icon, IconData selectedIcon});
 
-/// Navigasi bawah Moover: bar putih mengambang, tab aktif ditandai pill g100
-/// di ikon (teks 13,2:1), label tebal, dan garis g500 (4,38:1, nonteks).
+/// Navigasi bawah Moover (V2.1, 2026-10-10): bar putih menempel di bawah,
+/// tepi atas hairline, tanpa bayangan. Tab aktif: pill blueTint 56×30 di
+/// ikon (primary 6,67:1), label primary w800 (7,59:1); tak aktif textMuted
+/// w600 (6,13:1).
 /// Label dibatasi 130% seperti NavigationBar M3 agar empat tab muat di layar
 /// 320dp; teks konten tetap mengikuti skala OS. Reduced motion: tanpa animasi.
 class MooverBottomNavigation extends StatelessWidget {
@@ -24,34 +26,20 @@ class MooverBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 220);
-    final radius = BorderRadius.circular(MooverRadius.lg);
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(
-        MooverSpace.md,
-        0,
-        MooverSpace.md,
-        MooverSpace.md,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: [
-            BoxShadow(
-              color: MooverColors.text.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Material(
-          color: MooverColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: radius,
-            side: const BorderSide(color: MooverColors.hairline),
+        : const Duration(milliseconds: 200);
+    return Material(
+      color: MooverColors.surface,
+      shape: const Border(top: BorderSide(color: MooverColors.hairline)),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          // V2.1: 6 atas, 8 samping, 12 bawah (+ safe area).
+          padding: const EdgeInsets.fromLTRB(
+            MooverSpace.sm,
+            6,
+            MooverSpace.sm,
+            MooverSpace.md,
           ),
-          clipBehavior: Clip.antiAlias,
           child: MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.3,
             child: Row(
@@ -89,7 +77,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? MooverColors.text : MooverColors.textMuted;
+    final color = selected ? MooverColors.primary : MooverColors.textMuted;
     return MergeSemantics(
       child: Semantics(
         button: true,
@@ -97,57 +85,44 @@ class _NavButton extends StatelessWidget {
         inMutuallyExclusiveGroup: true,
         child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(MooverRadius.md),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 64),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedContainer(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
-                    width: selected ? 56 : 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: MooverColors.g100.withValues(
-                        alpha: selected ? 1 : 0,
-                      ),
-                      borderRadius: BorderRadius.circular(MooverRadius.md),
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: duration,
+                  curve: Curves.easeOutCubic,
+                  width: 56,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: MooverColors.blueTint.withValues(
+                      alpha: selected ? 1 : 0,
                     ),
-                    child: Icon(
-                      selected ? item.selectedIcon : item.icon,
-                      size: 22,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(
+                    selected ? item.selectedIcon : item.icon,
+                    size: 22,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 3), // V2.1: jarak ikon–label
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    // labelSmall 11sp (V2.1).
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                       color: color,
                     ),
                   ),
-                  const SizedBox(height: MooverSpace.xs),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: color,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: MooverSpace.xs),
-                  AnimatedContainer(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
-                    width: selected ? 16 : 0,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: MooverColors.g500,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

@@ -4,12 +4,12 @@ import '../core/themes/theme.dart';
 import '../core/widgets/widgets.dart';
 import '../landing/landing_screen.dart';
 
-/// Gradient khusus Splash: hitam → biru brand (gaya kartu gelap web). Layar
+/// Gradient khusus Splash: ink → navy → blue500 (palet V2.1, 2026-10-10). Layar
 /// lain memakai permukaan solid.
 const splashGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [MooverColors.text, MooverColors.g900, MooverColors.g500],
+  colors: [MooverColors.text, MooverColors.navy, MooverColors.blue500],
   stops: [0, 0.6, 1],
 );
 

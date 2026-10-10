@@ -4,50 +4,55 @@ import 'package:flutter/material.dart';
 // `moover-mobile-planning/DESIGN.md`: "Disetujui" = final; "Usulan aktif" =
 // nilai sementara, ubah hanya di file ini.
 //
-// Palet mengikuti web dashboard (`moover-web/.../src/assets/main.css`) dan
-// D1 (Disetujui): primary #074A97 + skala biru g*. Teks utama #111111
-// (Usulan aktif), teks sekunder #6B7280 (D5). Rasio kontras di komentar =
-// hitungan WCAG, diuji di test/ui/core/design_system_test.dart.
+// Keputusan pemilik project 2026-10-10: design system V2.1
+// (`docs/Moover V2 — Driver App Redesign (V2.1).html`) menggantikan palet
+// web/D1 (#074A97) dan teks sekunder D5 (#6B7280). DESIGN.md planning belum
+// diperbarui. Rasio kontras di komentar = hitungan WCAG, diuji di
+// test/ui/core/design_system_test.dart.
 
 abstract final class MooverColors {
-  // Skala biru brand (nama token sama dengan web). Jangan dipakai untuk teks
-  // tanpa cek kontras: g500 4,38:1 dan g300 2,40:1 terhadap putih.
-  static const g900 = Color(0xFF074A97);
-  static const g700 = Color(0xFF0A5BB5);
-  static const g600 = Color(0xFF1167C4);
-  static const g500 = Color(0xFF1A7AD6);
-  static const g300 = Color(0xFF5AAEF0);
-  static const g100 = Color(0xFFB8DCFA);
-  static const g50 = Color(0xFFE8F2FD);
+  // Palet V2.1, diambil dari logo (loop navy → cyan).
+  static const navy = Color(0xFF06275C); // header, permukaan gelap
+  static const blue700 = Color(0xFF0550AE); // aksi utama, tautan
+  // Nonteks saja: 3,96:1 di putih, 3,65:1 di latar.
+  static const blue500 = Color(0xFF0A84D8);
+  // Hanya di atas navy (aksen/live): 1,67:1 di putih. Label navy di atasnya
+  // 8,63:1.
+  static const cyan = Color(0xFF08DCF3);
+  static const cyanTint = Color(0xFFDDF8FD); // chip "sedang trip"
+  static const blueTint = Color(0xFFE8F1FD); // tile ikon, elemen terpilih
+  // Teks sekunder di atas navy: 9,54:1 (5,01:1 di blue700).
+  static const sky = Color(0xFFBFD3F5);
+  // Pill "belum clock-in" (garis + teks) hanya di atas navy/blue700:
+  // 10,16:1 di navy, 5,4:1 di blue700.
+  static const amber = Color(0xFFFFD27A);
 
   // Semantik.
-  static const primary = g900; // putih di atasnya 8,62:1
-  static const text = Color(0xFF111111); // 17,7:1 di latar, 18,9:1 di surface
-  // D5. 4,54:1 di latar, 4,83:1 di surface.
-  static const textMuted = Color(0xFF6B7280);
-  // Panel web #F5F6F5 sedikit dicerahkan: muted di atas #F5F6F5 hanya
-  // 4,46:1 (gagal D9). Keputusan pemilik project 2026-10-10.
-  static const background = Color(0xFFF7F8F7);
+  static const primary = blue700; // putih di atasnya 7,59:1
+  static const text = Color(0xFF0B1730); // Ink; 16,4:1 di latar
+  static const textMuted = Color(
+    0xFF56627A,
+  ); // Slate; 5,66:1 latar, 6,13:1 putih
+  static const background = Color(0xFFF3F6FB); // Ground
   static const surface = Color(0xFFFFFFFF);
-  // Garis pemisah dekoratif (divider, tepi kartu), --border web. Bukan batas
-  // kontrol, jadi tidak wajib 3:1; batas kontrol memakai outline.
-  static const hairline = Color(0xFFE4E7E4);
+  // Line: garis pemisah dekoratif (divider, tepi kartu). Bukan batas kontrol,
+  // jadi tidak wajib 3:1; batas kontrol memakai outline.
+  static const hairline = Color(0xFFE2E8F2);
 }
 
-/// Tone warna status. Disetujui (prinsip) D6: makna tone mengikuti web.
-///
-/// Nilai [foreground] adalah KANDIDAT: warna web yang digelapkan (hue tetap)
-/// sampai ≥4,5:1 terhadap [background] menurut hitungan WCAG. Belum diuji di
-/// perangkat, belum final. Web asli: ok #2E8B57, warn #B7860B, err #E0524D,
-/// info #2563EB, neutral #6B7280. Hijau/kuning/merah sengaja tidak diganti
-/// palet agar status tetap mudah dibedakan.
+/// Tone warna status. Disetujui (prinsip) D6. Nilai dari V2.1 (2026-10-10),
+/// semua ≥4,5:1 terhadap [background]-nya. Penyimpangan dari HTML: ok
+/// #1A7F4B digelapkan ke #187A48 (4,44 → 4,74:1). indigo tidak ada di V2,
+/// dipertahankan dari palet lama agar tone tidak disamakan.
 enum StatusTone {
-  ok(Color(0xFF287A4C), Color(0xFFE6F4EA)),
-  warn(Color(0xFF8E6809), Color(0xFFFFF6DC)),
-  err(Color(0xFFCA2923), Color(0xFFFDE8E7)),
-  info(Color(0xFF1759EA), Color(0xFFE8EFFD)),
+  ok(Color(0xFF187A48), Color(0xFFE4F5EC)),
+  warn(Color(0xFF8A4B00), Color(0xFFFFF0D6)),
+  err(Color(0xFFB3261E), Color(0xFFFCE8E6)),
+  info(MooverColors.blue700, MooverColors.blueTint),
+  // V2: trip yang sedang berjalan; badge memakai titik cyan.
+  live(Color(0xFF04607A), MooverColors.cyanTint),
   indigo(Color(0xFF4F46E5), Color(0xFFECEBFD)),
-  neutral(Color(0xFF656C79), Color(0xFFF0F1F0));
+  neutral(MooverColors.textMuted, Color(0xFFEEF2F8));
 
   const StatusTone(this.foreground, this.background);
   final Color foreground;
@@ -63,10 +68,10 @@ abstract final class MooverSpace {
   static const screen = 20.0;
 }
 
-// Usulan aktif, belum di DESIGN.md. card: kartu biasa dan Agenda (20, tetap);
-// lg: bar navigasi mengambang.
+// Usulan aktif, belum di DESIGN.md. md: tombol (V2.1); input: kolom isian
+// (V2.1); card: kartu biasa dan Agenda (20, tetap); lg: bar navigasi.
 abstract final class MooverRadius {
-  static const sm = 12.0, md = 16.0, card = 20.0, lg = 24.0;
+  static const sm = 12.0, input = 14.0, md = 16.0, card = 20.0, lg = 24.0;
 }
 
 // Disetujui (D2): font dibundel sebagai aset.
@@ -78,31 +83,46 @@ const tabularFigures = [FontFeature.tabularFigures()];
 ThemeData mooverTheme() {
   final scheme =
       ColorScheme.fromSeed(
-        // Seed #074A97 (UD3): warna turunan M3 (surfaceContainer dialog/nav
-        // bar) ikut keluarga biru brand. Tanpa dark mode di v1 (UD3).
+        // Seed = primary (UD3): warna turunan M3 (surfaceContainer dialog)
+        // ikut keluarga biru brand. Tanpa dark mode di v1 (UD3).
         seedColor: MooverColors.primary,
       ).copyWith(
         primary: MooverColors.primary,
         onPrimary: MooverColors.surface,
-        // Container lembut: teks di atas g100 13,2:1.
-        primaryContainer: MooverColors.g100,
-        onPrimaryContainer: MooverColors.text,
-        // Aksen g700: putih 6,61:1 (g500 hanya 4,38:1).
-        secondary: MooverColors.g700,
+        // Tint biru V2: teks blue700 di atasnya 6,67:1.
+        primaryContainer: MooverColors.blueTint,
+        onPrimaryContainer: MooverColors.primary,
+        // Navy: putih 14,5:1.
+        secondary: MooverColors.navy,
         onSecondary: MooverColors.surface,
-        // Elemen terpilih (indikator M3 bawaan): teks di atas g300 7,87:1.
-        secondaryContainer: MooverColors.g300,
-        onSecondaryContainer: MooverColors.text,
+        // Elemen terpilih (indikator M3 bawaan): blue700 di blueTint 6,67:1.
+        secondaryContainer: MooverColors.blueTint,
+        onSecondaryContainer: MooverColors.primary,
         surface: MooverColors.surface,
-        // Turunan seed #074A97 terlalu gelap untuk muted D5 (4,15:1); samakan
-        // dengan latar (4,54:1). Dipakai NavigationBar/menu bawaan M3.
+        // Samakan dengan latar: dipakai NavigationBar/menu bawaan M3.
         surfaceContainer: MooverColors.background,
         onSurface: MooverColors.text,
         onSurfaceVariant: MooverColors.textMuted,
+        // Penyimpangan dari V2.1 (D9): tepi input #D5DCE7 (1,38:1) dan tombol
+        // sekunder #C9D6EE (1,46:1) gagal 3:1; batas kontrol memakai Slate
+        // (6,13:1).
         outline: MooverColors.textMuted,
         outlineVariant: MooverColors.hairline, // warna bawaan Divider
-        // error tetap bawaan M3 #BA1A1A: 6,07:1 di latar, 6,46:1 di surface.
+        // V2.1 danger: 6,03:1 di latar, 6,54:1 di surface.
+        error: StatusTone.err.foreground,
       );
+  // V2.1: tombol tinggi 56, radius 16, label 16/800. ponytail: w800 tampil
+  // sebagai Bold (700) karena PlusJakartaSans-ExtraBold belum dibundel;
+  // tambahkan file + entri pubspec bila disetujui.
+  const buttonShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(MooverRadius.md)),
+  );
+  const buttonSize = Size(64, 56);
+  const buttonLabel = TextStyle(fontSize: 16, fontWeight: FontWeight.w800);
+  OutlineInputBorder inputBorder(Color color) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(MooverRadius.input),
+    borderSide: BorderSide(color: color, width: 1.5),
+  );
 
   return ThemeData(
     colorScheme: scheme,
@@ -138,7 +158,35 @@ ThemeData mooverTheme() {
     ),
     // Dialog putih polos, bukan tint M3: teks dan tombol diuji di atas surface.
     dialogTheme: const DialogThemeData(backgroundColor: MooverColors.surface),
-    // Segmen terpilih primary + teks putih (8,62:1); tepi outline (4,83:1).
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: buttonSize,
+        shape: buttonShape,
+        textStyle: buttonLabel,
+        // V2.1 disabled: Slate di atas Line 4,98:1.
+        disabledBackgroundColor: MooverColors.hairline,
+        disabledForegroundColor: MooverColors.textMuted,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: buttonSize,
+        shape: buttonShape,
+        textStyle: buttonLabel.copyWith(fontSize: 15),
+        side: const BorderSide(color: MooverColors.textMuted, width: 1.5),
+      ),
+    ),
+    // V2.1: isian putih, radius 14, tepi 1,5. ponytail: ring fokus #E8F1FD
+    // 4px belum ada; tambahkan bila dibutuhkan setelah Login ditinjau.
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: MooverColors.surface,
+      enabledBorder: inputBorder(MooverColors.textMuted),
+      focusedBorder: inputBorder(MooverColors.primary),
+      errorBorder: inputBorder(StatusTone.err.foreground),
+      focusedErrorBorder: inputBorder(StatusTone.err.foreground),
+    ),
+    // Segmen terpilih primary + teks putih (7,59:1); tepi outline (6,13:1).
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         backgroundColor: MooverColors.surface,

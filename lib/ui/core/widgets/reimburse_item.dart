@@ -32,12 +32,16 @@ class MooverReimburseItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // V2.1: tile ikon 40, radius 12, blueTint (ikon primary 6,67:1).
           ExcludeSemantics(
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: MooverColors.background,
-              foregroundColor: MooverColors.primary,
-              child: Icon(icon, size: 20),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: MooverColors.blueTint,
+                borderRadius: BorderRadius.circular(MooverRadius.sm),
+              ),
+              child: Icon(icon, size: 20, color: MooverColors.primary),
             ),
           ),
           const SizedBox(width: MooverSpace.md),

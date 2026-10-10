@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moover_driver/ui/core/themes/theme.dart';
 import 'package:moover_driver/ui/core/widgets/widgets.dart';
@@ -20,6 +21,15 @@ Widget app({Widget home = const MainMenuScreen(), double textScale = 1}) =>
       ),
       home: home,
     );
+
+/// Bidang header navy (Beranda, Akun), termasuk tab yang tidak tampil.
+Finder navyBox() => find.byWidgetPredicate(
+  (w) =>
+      w is DecoratedBox &&
+      w.decoration is BoxDecoration &&
+      (w.decoration as BoxDecoration).color == MooverColors.navy,
+  skipOffstage: false,
+);
 
 Finder tab(String label) => find.descendant(
   of: find.byType(MooverBottomNavigation),
@@ -153,7 +163,7 @@ void main() {
     );
   });
 
-  testWidgets('item trip: data, tanpa kartu, riwayat per tanggal', (
+  testWidgets('item trip: data, kartu sendiri, riwayat per tanggal', (
     tester,
   ) async {
     await tester.pumpWidget(app());
@@ -182,13 +192,27 @@ void main() {
         StatusTone.neutral,
       ),
     ]);
-    // Langsung di latar halaman, tidak dibungkus kartu.
+    // V2.1: tiap item adalah kartu sendiri, tidak dibungkus kartu bagian.
     expect(
       find.ancestor(
         of: find.byType(MooverTripItem),
         matching: find.byType(Card),
       ),
       findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(MooverTripItem),
+        matching: find.byType(Card),
+      ),
+      findsNWidgets(2),
+    );
+    // Hanya trip pertama hari ini ditandai "Berikutnya".
+    expect(
+      tester
+          .widgetList<MooverTripItem>(find.byType(MooverTripItem))
+          .map((t) => t.next),
+      [true, false],
     );
 
     await tester.tap(tab('Trip'));
@@ -268,7 +292,7 @@ void main() {
       tester.getSemantics(find.byType(MooverTripItem).first),
       isSemantics(
         label:
-            '09.30 WIB\nTerjadwal\n'
+            '09.30 WIB\nBerikutnya\nTerjadwal\n'
             'Dari Kantor Pusat ke Kantor Cabang (contoh)\n2 penumpang',
       ),
     );
@@ -276,22 +300,18 @@ void main() {
   });
 
   testWidgets(
-    'kartu agenda: data, gradient palet, kontras, tanpa aksi clock-in',
+    'kartu agenda: data, di header navy, kontras, tanpa aksi clock-in',
     (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(app());
-      final agenda = find.byWidgetPredicate(
-        (w) =>
-            w is DecoratedBox &&
-            w.decoration is BoxDecoration &&
-            (w.decoration as BoxDecoration).gradient != null,
-      );
+      final agenda = find.byType(MooverAgendaCard);
       expect(agenda, findsOneWidget);
       Finder inAgenda(Finder f) => find.descendant(of: agenda, matching: f);
 
       // Data mock tetap: jumlah, waktu, rute, status, jam operasional.
       for (final t in [
         'Agenda hari ini',
+        '9 Okt 2026',
         '2 trip',
         'Berikutnya',
         '09.30 WIB',
@@ -307,43 +327,41 @@ void main() {
         (route.origin, route.destination, route.onDark),
         ('Kantor Pusat', 'Kantor Cabang (contoh)', true),
       );
-      // Urutan: label → waktu → rute → status.
+      // Urutan V2.1: label + status clock-in → waktu → rute → jam
+      // operasional.
       double y(String t) => tester.getTopLeft(inAgenda(find.text(t))).dy;
       final routeY = tester.getTopLeft(
         inAgenda(find.byType(MooverRouteTimeline)),
       );
       expect(y('Agenda hari ini'), lessThan(y('09.30 WIB')));
+      expect(y('Belum clock-in hari ini.'), lessThan(y('09.30 WIB')));
       expect(y('09.30 WIB'), lessThan(routeY.dy));
-      expect(routeY.dy, lessThan(y('Belum clock-in hari ini.')));
+      expect(routeY.dy, lessThan(y('Jam operasional 07.30–16.30')));
 
-      // Gradient hanya dari skala biru brand (web/D1).
-      final gradient =
-          (tester.widget<DecoratedBox>(agenda).decoration as BoxDecoration)
-                  .gradient!
-              as LinearGradient;
-      const palette = [
-        MooverColors.g900,
-        MooverColors.g700,
-        MooverColors.g600,
-        MooverColors.g500,
-        MooverColors.g300,
-        MooverColors.g100,
-        MooverColors.g50,
-      ];
-      expect(gradient.colors, everyElement(isIn(palette)));
-      // Radius sama dengan kartu biasa (20), bukan 24.
-      expect(
-        (tester.widget<DecoratedBox>(agenda).decoration as BoxDecoration)
-            .borderRadius,
-        BorderRadius.circular(MooverRadius.card),
-      );
+      // V2.1: kartu putih 8% di dalam header navy, radius kartu (20).
+      final card =
+          tester
+                  .widget<DecoratedBox>(
+                    inAgenda(find.byType(DecoratedBox)).first,
+                  )
+                  .decoration
+              as BoxDecoration;
+      expect(card.color, MooverAgendaCard.fill);
+      expect(card.borderRadius, BorderRadius.circular(MooverRadius.card));
+      // Kartu sepenuhnya di dalam bidang navy (lapisan Stack di bawahnya).
+      final agendaRect = tester.getRect(agenda);
+      expect(tester.getRect(navyBox().first).intersect(agendaRect), agendaRect);
 
-      // Kontras di setiap titik gradient: teks ≥4,5, indikator rute ≥3.
+      // Kontras di navy dan di bidang kartu (fill di atas navy): teks ≥4,5,
+      // indikator rute ≥3.
       Color textColor(String t) =>
           tester.widget<Text>(inAgenda(find.text(t))).style!.color!;
-      for (final stop in gradient.colors) {
+      final cardBg = Color.alphaBlend(MooverAgendaCard.fill, MooverColors.navy);
+      for (final stop in [MooverColors.navy, cardBg]) {
         for (final t in [
           'Agenda hari ini',
+          '9 Okt 2026',
+          'Belum clock-in hari ini.',
           '2 trip',
           'Berikutnya',
           '09.30 WIB',
@@ -357,11 +375,12 @@ void main() {
             reason: '$t / $stop',
           );
         }
-        for (final c in [MooverColors.g100]) {
+        for (final c in [MooverColors.sky]) {
           expect(contrast(c, stop), greaterThanOrEqualTo(3), reason: 'rute');
         }
       }
-      // Status clock-in: teks di atas pill g100.
+      // Status clock-in V2.1: pill garis amber, warna garis = warna teks
+      // (sudah diuji ≥4,5 di kedua latar di atas).
       final pill = tester.widget<DecoratedBox>(
         find
             .ancestor(
@@ -370,13 +389,10 @@ void main() {
             )
             .first,
       );
-      expect(
-        contrast(
-          textColor('Belum clock-in hari ini.'),
-          (pill.decoration as ShapeDecoration).color!,
-        ),
-        greaterThanOrEqualTo(4.5),
-      );
+      final pillShape =
+          (pill.decoration as ShapeDecoration).shape as StadiumBorder;
+      expect(pillShape.side.color, MooverColors.amber);
+      expect(textColor('Belum clock-in hari ini.'), MooverColors.amber);
 
       // Status saja: tidak ada tombol/aksi clock-in atau klaim berhasil.
       expect(
@@ -402,6 +418,88 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets('header navy Beranda: sudut bawah 32, sapaan, status bar', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(app());
+    // Navy hanya di Beranda dan Akun; Trip dan Reimburse judul di Ground.
+    expect(navyBox(), findsNWidgets(2));
+    final home = navyBox().first;
+    expect(
+      (tester.widget<DecoratedBox>(home).decoration as BoxDecoration)
+          .borderRadius,
+      const BorderRadius.vertical(bottom: Radius.circular(32)),
+    );
+    // Header full-bleed sampai tepi atas layar.
+    expect(tester.getTopLeft(home), Offset.zero);
+    expect(tester.getSize(home).width, 800);
+    final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+      find
+          .ancestor(
+            of: home,
+            matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+          )
+          .first,
+    );
+    expect(region.value, SystemUiOverlayStyle.light);
+
+    Color color(String t) => tester.widget<Text>(find.text(t)).style!.color!;
+    expect(color('Halo,'), MooverColors.sky);
+    expect(color(demoDriverName), MooverColors.surface);
+    for (final t in ['Halo,', demoDriverName]) {
+      expect(contrast(color(t), MooverColors.navy), greaterThanOrEqualTo(4.5));
+    }
+    expect(
+      tester.getSemantics(find.text('Halo,')),
+      isSemantics(label: 'Halo,\n$demoDriverName', isHeader: true),
+    );
+    handle.dispose();
+  });
+
+  testWidgets('Akun: header navy, kartu profil menumpang, Keluar tone err', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+
+    final header = navyBox().last;
+    final title = find.text('Akun').first;
+    expect(
+      find.descendant(of: find.byType(MooverBottomNavigation), matching: title),
+      findsNothing,
+    );
+    final titleColor = tester.widget<Text>(title).style!.color!;
+    expect(contrast(titleColor, MooverColors.navy), greaterThanOrEqualTo(4.5));
+
+    // Kartu profil: radius 24, atas di navy, bawah melewati tepi navy.
+    final profile = find.ancestor(
+      of: find.text('Employee ID: $demoEmployeeId'),
+      matching: find.byType(Card),
+    );
+    expect(
+      (tester.widget<Card>(profile).shape as RoundedRectangleBorder)
+          .borderRadius,
+      const BorderRadius.all(Radius.circular(MooverRadius.lg)),
+    );
+    final navyBottom = tester.getBottomLeft(header).dy;
+    expect(tester.getTopLeft(profile).dy, lessThan(navyBottom));
+    expect(tester.getBottomLeft(profile).dy, greaterThan(navyBottom));
+
+    // Tombol Keluar: tint err, label err, tinggi ≥52.
+    final logout = find.ancestor(
+      of: find.text('Keluar'),
+      matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+    );
+    final style = tester.widget<ButtonStyleButton>(logout).style!;
+    final bg = style.backgroundColor!.resolve({})!;
+    final fg = style.foregroundColor!.resolve({})!;
+    expect((bg, fg), (StatusTone.err.background, StatusTone.err.foreground));
+    expect(contrast(fg, bg), greaterThanOrEqualTo(4.5));
+    expect(tester.getSize(logout).height, greaterThanOrEqualTo(52));
+  });
 
   testWidgets('semantik tab: tombol, label, status terpilih', (tester) async {
     final handle = tester.ensureSemantics();

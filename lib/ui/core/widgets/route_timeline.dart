@@ -7,9 +7,9 @@ import '../themes/theme.dart';
 /// Dibaca pembaca layar sebagai satu kalimat "Dari … ke …"; titik dan garis
 /// dekoratif tidak dibaca.
 ///
-/// Kontras (hitungan WCAG) di latar halaman / kartu putih: teks ≥17:1,
-/// titik g900 ≥8:1, garis g500 ≥4,1:1. [onDark] (kartu g700–g900): teks
-/// putih ≥6,61:1, titik dan garis g100 ≥4,61:1 (g300 hanya 2,75:1 di g700).
+/// Kontras (hitungan WCAG) di latar halaman / kartu putih: teks ≥16:1,
+/// titik primary ≥7:1, garis blue500 ≥3,65:1. [onDark] (navy, blue700, kartu
+/// Agenda): teks putih ≥7,59:1, titik dan garis sky ≥5,01:1.
 class MooverRouteTimeline extends StatelessWidget {
   const MooverRouteTimeline({
     super.key,
@@ -37,8 +37,8 @@ class MooverRouteTimeline extends StatelessWidget {
     final textStyle = base.copyWith(
       color: onDark ? MooverColors.surface : MooverColors.text,
     );
-    final dotColor = onDark ? MooverColors.g100 : MooverColors.g900;
-    final lineColor = onDark ? MooverColors.g100 : MooverColors.g500;
+    final dotColor = onDark ? MooverColors.sky : MooverColors.primary;
+    final lineColor = onDark ? MooverColors.sky : MooverColors.blue500;
     // Titik di tengah baris pertama teks, berapa pun skala teks OS.
     final lineHeight = MediaQuery.textScalerOf(context)
         .scale((base.fontSize ?? 16) * (base.height ?? 1.4));

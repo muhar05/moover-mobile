@@ -23,10 +23,10 @@ class PrimaryButton extends StatelessWidget {
       return FilledButton.icon(
         onPressed: null,
         // Usulan aktif (audit tombol 2026-10-10): busy = sedang diproses,
-        // label tetap terbaca. Teks di atas g100 13,2:1; spinner (primary)
-        // 6,02:1. Nonaktif lain tetap bawaan M3.
+        // label tetap terbaca. Teks di atas blueTint 15,6:1; spinner
+        // (primary) 6,67:1. Nonaktif lain mengikuti tema (V2.1 disabled).
         style: FilledButton.styleFrom(
-          disabledBackgroundColor: MooverColors.g100,
+          disabledBackgroundColor: MooverColors.blueTint,
           disabledForegroundColor: MooverColors.text,
         ),
         icon: const SizedBox.square(

@@ -65,9 +65,9 @@ void main() {
     expect(box, findsOneWidget);
     expect(tester.getSize(box), tester.getSize(find.byType(SplashScreen)));
     expect(splashGradient.colors, const [
-      Color(0xFF111111),
-      Color(0xFF074A97),
-      Color(0xFF1A7AD6),
+      Color(0xFF0B1730),
+      Color(0xFF06275C),
+      Color(0xFF0A84D8),
     ]);
     // Warna logo terbanyak ±#0040A0 di atas bidang putih.
     expect(

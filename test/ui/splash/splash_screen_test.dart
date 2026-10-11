@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/ui/core/themes/theme.dart';
-import 'package:moover_driver/ui/core/widgets/widgets.dart';
-import 'package:moover_driver/ui/landing/landing_screen.dart';
-import 'package:moover_driver/ui/splash/splash_screen.dart';
+import 'package:moover/ui/core/themes/theme.dart';
+import 'package:moover/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/landing/landing_screen.dart';
+import 'package:moover/ui/splash/splash_screen.dart';
 
 class NavCount extends NavigatorObserver {
   int replaces = 0;

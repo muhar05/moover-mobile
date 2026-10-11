@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/ui/core/themes/theme.dart';
-import 'package:moover_driver/ui/core/widgets/widgets.dart';
-import 'package:moover_driver/ui/landing/landing_screen.dart';
-import 'package:moover_driver/ui/login/login_screen.dart';
-import 'package:moover_driver/ui/main_menu/main_menu_screen.dart';
-import 'package:moover_driver/ui/main_menu/mock_data.dart'
-    show clockedInToday, demoDriverEmail, vehicle;
+import 'package:moover/ui/attendance/attendance_screen.dart';
+import 'package:moover/ui/core/themes/theme.dart';
+import 'package:moover/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/landing/landing_screen.dart';
+import 'package:moover/ui/login/login_screen.dart';
+import 'package:moover/ui/main_menu/main_menu_screen.dart';
+import 'package:moover/ui/main_menu/mock_data.dart'
+    show clockInTime, demoDriverEmail, vehicle;
 
 import '../core/design_system_test.dart' show contrast;
 
@@ -78,6 +79,9 @@ int selectedTab(WidgetTester tester) => tester
     .selectedIndex;
 
 void main() {
+  // Status clock-in simulasi global (ValueNotifier): reset tiap tes.
+  setUp(() => clockInTime.value = null);
+
   testWidgets('tepat empat tab dengan label yang ditentukan; awal Beranda', (
     tester,
   ) async {
@@ -352,7 +356,7 @@ void main() {
   });
 
   testWidgets(
-    'kartu agenda: data, di header navy, kontras, tanpa aksi clock-in',
+    'kartu agenda: data, di header navy, kontras, satu aksi Clock-in',
     (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(app());
@@ -440,16 +444,26 @@ void main() {
       expect(pillShape.side.color, MooverColors.amber);
       expect(textColor('Belum clock-in hari ini.'), MooverColors.amber);
 
-      // Status saja: tidak ada tombol/aksi clock-in atau klaim berhasil.
-      expect(
-        inAgenda(
-          find.byWidgetPredicate(
-            (w) =>
-                w is InkWell || w is ButtonStyleButton || w is GestureDetector,
-          ),
-        ),
-        findsNothing,
+      // Satu-satunya aksi: tombol Clock-in V2.1 (simulasi, keputusan
+      // pemilik project 2026-10-11), cyan + label navy, ≥52dp. Tanpa klaim
+      // berhasil.
+      final clockIn = inAgenda(
+        find.byWidgetPredicate((w) => w is ButtonStyleButton),
       );
+      expect(clockIn, findsOneWidget);
+      expect(
+        find.descendant(of: clockIn, matching: find.text('Clock-in')),
+        findsOneWidget,
+      );
+      final style = tester.widget<ButtonStyleButton>(clockIn).style!;
+      expect(
+        (
+          style.backgroundColor!.resolve({}),
+          style.foregroundColor!.resolve({}),
+        ),
+        (MooverColors.cyan, MooverColors.navy),
+      );
+      expect(tester.getSize(clockIn).height, greaterThanOrEqualTo(52));
       expect(find.textContaining('berhasil'), findsNothing);
 
       // Jam diperbarui tiap detik: Timer (waktu palsu tes) membaca
@@ -775,7 +789,7 @@ void main() {
 
     // Available = sudah clock-in (keputusan 2026-10-10). Mock: belum
     // clock-in, sejalan dengan Beranda. Status teks, bukan toggle.
-    expect(clockedInToday, isFalse);
+    expect(clockInTime.value, isNull);
     expect(find.text('Belum clock-in hari ini.'), findsNothing);
     expect(find.byType(Switch), findsNothing);
     final badge = tester.widget<StatusBadge>(find.byType(StatusBadge).first);
@@ -784,7 +798,7 @@ void main() {
     final card = tester.widget<MooverExtraTripCard>(
       find.byType(MooverExtraTripCard),
     );
-    expect(card.available, clockedInToday);
+    expect(card.available, isFalse);
     expect(find.text('Tambah trip baru'), findsNothing);
     expect(find.text('Clock-in untuk menambah trip'), findsOneWidget);
     // Tile jenis trip informasi saja, tanpa aksi.
@@ -1156,5 +1170,65 @@ void main() {
     expect(formatDate(DateTime(2026, 10, 9)), 'Jumat, 9 Okt 2026');
     expect(formatDate(DateTime(2026, 10, 11)), 'Minggu, 11 Okt 2026');
     expect(formatDate(DateTime(2027, 1, 4)), 'Senin, 4 Jan 2027');
+  });
+
+  testWidgets('simulasi clock-in: Beranda → S04 → status, Trip Available', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('Clock-in'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+
+    await tester.tap(find.text('Simulasi tanpa kamera'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Kirim clock-in'));
+    await tester.pump();
+    await tester.tap(find.text('Kirim clock-in'));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AttendanceScreen), findsNothing);
+    final at = clockInTime.value!;
+    final hhmm = formatClock(at).substring(0, 5);
+    final agenda = find.byType(MooverAgendaCard);
+    expect(
+      find.descendant(of: agenda, matching: find.text('Clock-in $hhmm WIB')),
+      findsOneWidget,
+    );
+    // Sudah clock-in: tombol hilang, pill cyan.
+    expect(
+      find.descendant(
+        of: agenda,
+        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+      ),
+      findsNothing,
+    );
+    expect(
+      tester.widget<Text>(find.text('Clock-in $hhmm WIB')).style!.color,
+      MooverColors.cyan,
+    );
+    // D10: pesan menyebut simulasi, bukan berhasil.
+    expect(find.textContaining('simulasi'), findsOneWidget);
+    expect(find.textContaining('berhasil'), findsNothing);
+
+    await tester.tap(tab('Trip'));
+    await tester.pumpAndSettle();
+    final badge = tester.widget<StatusBadge>(find.byType(StatusBadge).first);
+    expect((badge.label, badge.tone), ('Available', StatusTone.ok));
+    expect(find.text('Tambah trip baru'), findsOneWidget);
+  });
+
+  testWidgets('clock-in dibatalkan (Kembali): status tetap belum', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('Clock-in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Kembali'));
+    await tester.pumpAndSettle();
+    expect(clockInTime.value, isNull);
+    expect(find.text('Belum clock-in hari ini.'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 }

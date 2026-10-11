@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MooverColors.navy: layar native sebelum Flutter tampil, menyambung ke
+         Splash Flutter (gradient gelap) agar tidak terlihat dua splash. -->
+    <color name="splash_background">#06275C</color>
+</resources>

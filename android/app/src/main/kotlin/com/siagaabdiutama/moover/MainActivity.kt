@@ -1,4 +1,4 @@
-package com.siagaabdiutama.moover_driver
+package com.siagaabdiutama.moover
 
 import io.flutter.embedding.android.FlutterActivity
 

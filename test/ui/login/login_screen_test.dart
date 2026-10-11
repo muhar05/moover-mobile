@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/ui/core/themes/theme.dart';
-import 'package:moover_driver/ui/core/widgets/widgets.dart';
-import 'package:moover_driver/ui/login/login_screen.dart';
-import 'package:moover_driver/ui/main_menu/main_menu_screen.dart';
+import 'package:moover/ui/core/themes/theme.dart';
+import 'package:moover/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/login/login_screen.dart';
+import 'package:moover/ui/main_menu/main_menu_screen.dart';
 
 double contrast(Color a, Color b) {
   final la = a.computeLuminance(), lb = b.computeLuminance();

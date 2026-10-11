@@ -77,7 +77,7 @@ Aturan:
 | Ikon | `lucide_icons_flutter` (MIT, gaya garis V2.1; disetujui 2026-10-11). Jangan pakai `Icons.*` Material |
 | Lint | `flutter_lints` |
 | Test | `flutter_test` |
-| App ID | `com.siagaabdiutama.moover_driver` |
+| App ID | `com.siagaabdiutama.moover` |
 
 **Belum ditentukan:** state management, routing package, HTTP client, struktur folder lanjutan.
 

@@ -10,9 +10,9 @@ import 'spread.dart';
 /// 2026-10-10): trip berikutnya ditandai di daftar jadwal. Bidang [fill]
 /// putih 8% di atas navy (#1A3869): putih 11,6:1, sky 7,6:1, amber 8,1:1,
 /// isi bar cyan 6,9:1 (nonteks). Hanya untuk latar navy.
-/// Hanya menampilkan status; tidak ada aksi clock-in (aturan belum ada).
-/// ponytail: tombol "Clock in" di header V2 tidak dibuat. Tambahkan saat
-/// aturan clock-in diputuskan (Q-B*).
+/// [action] opsional di bawah kartu: tombol "Clock-in" V2.1 (simulasi,
+/// keputusan pemilik project 2026-10-11). [clockedIn]: pill status cyan
+/// (8,63:1 di navy, 6,9:1 di bidang kartu), bukan amber.
 class MooverAgendaCard extends StatelessWidget {
   const MooverAgendaCard({
     super.key,
@@ -22,6 +22,8 @@ class MooverAgendaCard extends StatelessWidget {
     required this.clockInStatus,
     required this.operatingHours,
     required this.shiftProgress,
+    this.clockedIn = false,
+    this.action,
   });
 
   final String date;
@@ -36,6 +38,8 @@ class MooverAgendaCard extends StatelessWidget {
   /// 0–1: posisi waktu sekarang di jam operasional. Dekoratif (teks
   /// [operatingHours] membawa informasinya).
   final double shiftProgress;
+  final bool clockedIn;
+  final Widget? action;
 
   /// V2.1: putih 8%, tepi putih 12% (dekoratif).
   static const fill = Color(0x14FFFFFF);
@@ -45,6 +49,7 @@ class MooverAgendaCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     const onCard = MooverColors.surface;
     const muted = MooverColors.sky;
+    final pill = clockedIn ? MooverColors.cyan : MooverColors.amber;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
@@ -72,10 +77,8 @@ class MooverAgendaCard extends StatelessWidget {
                 ],
               ),
               DecoratedBox(
-                decoration: const ShapeDecoration(
-                  shape: StadiumBorder(
-                    side: BorderSide(color: MooverColors.amber),
-                  ),
+                decoration: ShapeDecoration(
+                  shape: StadiumBorder(side: BorderSide(color: pill)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -85,7 +88,7 @@ class MooverAgendaCard extends StatelessWidget {
                   child: Text(
                     clockInStatus,
                     style: textTheme.labelMedium?.copyWith(
-                      color: MooverColors.amber,
+                      color: pill,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -144,6 +147,10 @@ class MooverAgendaCard extends StatelessWidget {
                 style: textTheme.titleSmall?.copyWith(color: onCard),
               ),
             ),
+            if (action case final action?) ...[
+              const SizedBox(height: 14),
+              action,
+            ],
           ],
         ),
       ),

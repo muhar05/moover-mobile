@@ -69,13 +69,33 @@ class _HomeTabState extends State<_HomeTab> {
               const _Avatar(size: 48, ring: 2, border: MooverColors.navy),
             ],
           ),
-          MooverAgendaCard(
-            date: formatDate(_now),
-            clock: formatClock(_now),
-            tripCount: tripsToday.length,
-            clockInStatus: 'Belum clock-in hari ini.',
-            operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
-            shiftProgress: _shiftProgress(_now),
+          ValueListenableBuilder(
+            valueListenable: clockInTime,
+            builder: (context, inAt, _) => MooverAgendaCard(
+              date: formatDate(_now),
+              clock: formatClock(_now),
+              tripCount: tripsToday.length,
+              clockInStatus: inAt == null
+                  ? 'Belum clock-in hari ini.'
+                  : 'Clock-in ${formatClock(inAt).substring(0, 5)} WIB',
+              clockedIn: inAt != null,
+              operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
+              shiftProgress: _shiftProgress(_now),
+              // ponytail: clock-out (V2.1 "Shift complete") belum dibuat;
+              // tambahkan bersama aturan K7 (Incomplete).
+              action: inAt == null
+                  ? FilledButton.icon(
+                      onPressed: () => _clockIn(context),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        backgroundColor: MooverColors.cyan,
+                        foregroundColor: MooverColors.navy,
+                      ),
+                      icon: const Icon(LucideIcons.scanFace),
+                      label: const Text('Clock-in'),
+                    )
+                  : null,
+            ),
           ),
         ],
       ),
@@ -94,6 +114,27 @@ class _HomeTabState extends State<_HomeTab> {
       ],
     );
   }
+}
+
+/// Buka S04; simpan waktu yang dikembalikan. Simulasi tanpa server (D10):
+/// pesan menyebut belum terkirim, bukan "berhasil".
+Future<void> _clockIn(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final at = await Navigator.of(
+    context,
+  ).push<DateTime>(MaterialPageRoute(builder: (_) => const AttendanceScreen()));
+  if (at == null) return;
+  clockInTime.value = at;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          'Clock-in ${formatClock(at).substring(0, 5)} WIB tercatat di '
+          'simulasi (belum dikirim ke server).',
+        ),
+      ),
+    );
 }
 
 /// Sapaan menurut jam (V2.1: <11 pagi, <15 siang, <19 sore, sisanya malam).

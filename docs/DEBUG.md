@@ -67,7 +67,7 @@ adb shell 'settings put global transition_animation_scale 0; settings put global
 adb shell 'settings put global transition_animation_scale 1; settings put global animator_duration_scale 1'
 adb shell input keyevent 4                           # tombol Back
 adb logcat -s flutter                                # log print()/debugPrint saja
-adb shell am force-stop com.siagaabdiutama.moover_driver  # tutup paksa app
+adb shell am force-stop com.siagaabdiutama.moover  # tutup paksa app
 ```
 
 Ubah `font_scale` saat `flutter run` sedang berjalan: app langsung menyesuaikan, tidak perlu reload.
@@ -88,5 +88,5 @@ flutter test --plain-name "tab Reimburse"             # satu tes berdasarkan nam
 | `No devices found` | emulator belum menyala; `flutter emulators --launch Pixel_4`, tunggu, `flutter devices` |
 | `adb: device offline` | `adb kill-server && adb start-server` |
 | build Gradle error setelah ganti branch | `flutter clean && flutter pub get && flutter run` |
-| app versi lama (APK profile) masih terpasang | `flutter run` akan menimpanya; atau `adb uninstall com.siagaabdiutama.moover_driver` |
+| app versi lama (APK profile) masih terpasang | `flutter run` akan menimpanya; atau `adb uninstall com.siagaabdiutama.moover` |
 | emulator berat/lambat | tutup lalu cold boot: `emulator -avd Pixel_4 -no-snapshot-load` |

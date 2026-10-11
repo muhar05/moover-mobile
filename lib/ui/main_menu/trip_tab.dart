@@ -12,7 +12,12 @@ class _TripTab extends StatelessWidget {
   // MOCK/DEMO. ponytail: form Add New Trip (S11) belum dibuat (Q-B1);
   // ganti dengan navigasi ke S11 saat aturannya dikonfirmasi.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: clockInTime,
+    builder: (context, inAt, _) => _build(context, clockedIn: inAt != null),
+  );
+
+  Widget _build(BuildContext context, {required bool clockedIn}) {
     final textTheme = Theme.of(context).textTheme;
     final dates = {for (final t in tripHistory) t.date};
     return _TabPage(
@@ -39,7 +44,7 @@ class _TripTab extends StatelessWidget {
                 ),
                 // D7: teks + warna. Bukan toggle (Available mengikuti
                 // clock-in).
-                clockedInToday
+                clockedIn
                     ? const StatusBadge(label: 'Available', tone: StatusTone.ok)
                     : const StatusBadge(
                         label: 'Tidak bertugas',
@@ -48,7 +53,7 @@ class _TripTab extends StatelessWidget {
               ],
             ),
             Text(
-              clockedInToday
+              clockedIn
                   ? 'Anda siap menerima trip tambahan.'
                   : 'Status Available aktif setelah clock-in.',
               style: textTheme.bodyMedium?.copyWith(
@@ -60,7 +65,7 @@ class _TripTab extends StatelessWidget {
       ),
       children: [
         MooverExtraTripCard(
-          available: clockedInToday,
+          available: clockedIn,
           onAdd: () => _notYet(context, 'Form trip baru'),
         ),
         Column(

@@ -76,10 +76,12 @@ const tripHistory = <Trip>[
   ),
 ];
 
-// Status clock-in hari ini. Available = sudah clock-in (keputusan pemilik
-// project 2026-10-10; Q-B1/K2 belum di DESIGN.md). Harus sejalan dengan
-// teks Beranda "Belum clock-in hari ini.".
-const clockedInToday = false;
+// Waktu clock-in hari ini; null = belum. Available = sudah clock-in
+// (keputusan pemilik project 2026-10-10; Q-B1/K2 belum di DESIGN.md).
+// Diisi oleh simulasi clock-in (S04, keputusan 2026-10-11).
+// ponytail: hanya di memori, hilang saat app ditutup dan tidak reset per
+// hari; ganti dengan data server saat API absensi (U5) Terverifikasi.
+final clockInTime = ValueNotifier<DateTime?>(null);
 
 typedef Vehicle = ({String model, String plate, String capacity, String image});
 

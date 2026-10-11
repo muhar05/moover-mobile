@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moover_driver/ui/core/themes/theme.dart';
-import 'package:moover_driver/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/core/themes/theme.dart';
+import 'package:moover/ui/core/widgets/widgets.dart';
 
 // Uji ini hanya mencakup pasangan warna dan komponen yang didefinisikan di
 // sini. Ini bukan uji aksesibilitas layar atau uji di perangkat.
@@ -552,7 +552,7 @@ void main() {
         await tester.pumpWidget(harness(agenda(progress: p)));
         expect(fill(), want, reason: '$p');
       }
-      // Tanpa tombol/aksi clock-in.
+      // Tanpa [action]: tidak ada tombol/aksi clock-in.
       expect(
         find.descendant(
           of: find.byType(MooverAgendaCard),
@@ -561,6 +561,35 @@ void main() {
           ),
         ),
         findsNothing,
+      );
+    });
+
+    testWidgets('Agenda: pill amber/cyan sesuai clockedIn, action dari '
+        'parameter', (tester) async {
+      Color pill() => tester.widget<Text>(find.text('Status X')).style!.color!;
+      await tester.pumpWidget(harness(agenda()));
+      expect(pill(), MooverColors.amber);
+      await tester.pumpWidget(
+        harness(
+          MooverAgendaCard(
+            date: 'Tanggal Q',
+            shiftProgress: 0.5,
+            tripCount: 7,
+            clock: '11.15.42',
+            clockInStatus: 'Status X',
+            operatingHours: 'Jam Y',
+            clockedIn: true,
+            action: const Text('Aksi Z'),
+          ),
+        ),
+      );
+      expect(pill(), MooverColors.cyan);
+      final cardBg = Color.alphaBlend(MooverAgendaCard.fill, MooverColors.navy);
+      expect(contrast(pill(), cardBg), greaterThanOrEqualTo(4.5));
+      // Aksi di bawah baris jam operasional.
+      expect(
+        tester.getTopLeft(find.text('Aksi Z')).dy,
+        greaterThan(tester.getTopLeft(find.text('Jam Y')).dy),
       );
     });
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
 
@@ -110,7 +111,8 @@ String tripDestination(Trip t) => _routeParts(t).last;
 const reimbursements = <Reimburse>[
   (
     category: 'Tol',
-    icon: Icons.toll_outlined,
+    // Lucide tidak punya ikon tol: karcis (pemilik project 2026-10-11).
+    icon: LucideIcons.ticket,
     amount: 'Rp 45.000',
     date: '8 Okt 2026',
     status: 'Diajukan',
@@ -118,7 +120,7 @@ const reimbursements = <Reimburse>[
   ),
   (
     category: 'BBM',
-    icon: Icons.local_gas_station_outlined,
+    icon: LucideIcons.fuel,
     amount: 'Rp 300.000',
     date: '6 Okt 2026',
     status: 'Disetujui',
@@ -126,7 +128,7 @@ const reimbursements = <Reimburse>[
   ),
   (
     category: 'Parkir',
-    icon: Icons.local_parking_outlined,
+    icon: LucideIcons.circleParking,
     amount: 'Rp 20.000',
     date: '3 Okt 2026',
     status: 'Dibayar',
@@ -134,7 +136,7 @@ const reimbursements = <Reimburse>[
   ),
   (
     category: 'Lainnya',
-    icon: Icons.receipt_outlined,
+    icon: LucideIcons.receipt,
     amount: 'Rp 75.000',
     date: '1 Okt 2026',
     status: 'Ditolak',

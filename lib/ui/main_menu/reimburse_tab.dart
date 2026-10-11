@@ -106,7 +106,7 @@ class _SubmitCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(MooverRadius.md),
                   ),
                   child: const Icon(
-                    Icons.receipt_long_outlined,
+                    LucideIcons.receiptText,
                     color: MooverColors.cyan,
                   ),
                 ),
@@ -147,7 +147,7 @@ class _SubmitCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              icon: const Icon(Icons.add),
+              icon: const Icon(LucideIcons.plus),
               label: const Text('Ajukan reimburse'),
             ),
           ],

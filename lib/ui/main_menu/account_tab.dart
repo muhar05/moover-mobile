@@ -14,22 +14,14 @@ class _AccountTab extends StatelessWidget {
   const _AccountTab();
 
   static const _account = <_Menu>[
-    (Icons.person_outline, 'Informasi profil', 'Nama, email, dan foto'),
-    (Icons.lock_outline, 'Ubah kata sandi', 'Perbarui kata sandi akun'),
-    (
-      Icons.directions_car_outlined,
-      'Kendaraan',
-      'Model, nomor polisi, kapasitas',
-    ),
-    (Icons.history, 'Time Log', 'Riwayat clock-in dan clock-out'),
+    (LucideIcons.user, 'Informasi profil', 'Nama, email, dan foto'),
+    (LucideIcons.lock, 'Ubah kata sandi', 'Perbarui kata sandi akun'),
+    (LucideIcons.car, 'Kendaraan', 'Model, nomor polisi, kapasitas'),
+    (LucideIcons.history, 'Time Log', 'Riwayat clock-in dan clock-out'),
   ];
   static const _support = <_Menu>[
-    (Icons.help_outline, 'Bantuan & FAQ', 'Jawaban pertanyaan umum'),
-    (
-      Icons.headset_mic_outlined,
-      'Hubungi support',
-      'WhatsApp, email, atau telepon',
-    ),
+    (LucideIcons.circleHelp, 'Bantuan & FAQ', 'Jawaban pertanyaan umum'),
+    (LucideIcons.headset, 'Hubungi support', 'WhatsApp, email, atau telepon'),
   ];
 
   Future<void> _logout(BuildContext context) async {
@@ -66,7 +58,7 @@ class _AccountTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(MooverRadius.card),
               ),
               child: Icon(
-                Icons.logout,
+                LucideIcons.logOut,
                 size: 30,
                 color: StatusTone.err.foreground,
               ),
@@ -220,7 +212,7 @@ class _AccountTab extends StatelessWidget {
                         ),
                       ),
                       const Icon(
-                        Icons.chevron_right,
+                        LucideIcons.chevronRight,
                         color: MooverColors.textMuted,
                       ),
                     ],
@@ -273,7 +265,7 @@ class _AccountTab extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              icon: const Icon(Icons.logout),
+              icon: const Icon(LucideIcons.logOut),
               label: const Text('Keluar'),
             ),
             Row(
@@ -390,7 +382,7 @@ class _MenuGroup extends StatelessWidget {
                               ),
                             ),
                             const Icon(
-                              Icons.chevron_right,
+                              LucideIcons.chevronRight,
                               size: 18,
                               color: MooverColors.textMuted,
                             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../themes/theme.dart';
 
@@ -105,7 +106,7 @@ class _MooverExtraTripCardState extends State<MooverExtraTripCard>
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                icon: const Icon(Icons.add),
+                icon: const Icon(LucideIcons.plus),
                 label: const Text('Tambah trip baru'),
               )
             else

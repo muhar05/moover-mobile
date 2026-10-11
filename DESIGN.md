@@ -64,7 +64,7 @@ Font: **Plus Jakarta Sans** dibundel di `assets/fonts/` (Regular, Medium 500, Se
 - **Dialog**: latar putih polos (bukan tint M3). Logout wajib konfirmasi.
 - **Avatar akun**: lingkaran g100 r32, inisial `text` `titleLarge`.
 - **State** (D10): `SkeletonBox` statis, `ErrorView` (ikon + pesan + "Coba lagi"), `EmptyView` (satu kalimat, aksi opsional).
-- Ikon: Material Icons (outlined untuk tak aktif, filled untuk aktif).
+- Ikon: Lucide (`lucide_icons_flutter`, garis 2 seperti V2.1). Tab aktif: varian tebal `…500`; Tol = `ticket` (Lucide tidak punya ikon tol).
 
 ## Aksesibilitas (D9)
 

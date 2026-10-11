@@ -74,17 +74,17 @@ class _TripTab extends StatelessWidget {
               builder: (context, constraints) {
                 const tiles = [
                   _ReasonTile(
-                    Icons.timer_outlined,
+                    LucideIcons.timer,
                     'Antar-jemput mendadak',
                     StatusTone.info,
                   ),
                   _ReasonTile(
-                    Icons.add_location_alt_outlined,
+                    LucideIcons.mapPinPlus,
                     'Permintaan trip baru',
                     StatusTone.live,
                   ),
                   _ReasonTile(
-                    Icons.edit_calendar_outlined,
+                    LucideIcons.calendarPlus,
                     'Perubahan jadwal atau shift',
                     StatusTone.info,
                   ),
@@ -356,7 +356,7 @@ class _TipsCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(MooverRadius.sm),
                   ),
                   child: const Icon(
-                    Icons.verified_user_outlined,
+                    LucideIcons.shieldCheck,
                     size: 20,
                     color: MooverColors.surface,
                   ),

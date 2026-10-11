@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
 import '../core/widgets/widgets.dart';
@@ -126,7 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ),
                                           ),
                                         ),
-                                        icon: const Icon(Icons.chevron_left),
+                                        icon: const Icon(
+                                          LucideIcons.chevronLeft,
+                                        ),
                                       )
                                     : null,
                               ),
@@ -285,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _employeeId,
                 decoration: InputDecoration(
                   hintText: 'ID dari perusahaan Anda',
-                  prefixIcon: const Icon(Icons.badge_outlined),
+                  prefixIcon: const Icon(LucideIcons.idCard),
                   errorStyle: errorStyle,
                 ),
                 autocorrect: false,
@@ -303,17 +306,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _password,
                 decoration: InputDecoration(
                   hintText: 'Kata sandi Anda',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(LucideIcons.lock),
                   errorStyle: errorStyle,
                   suffixIcon: IconButton(
                     tooltip: _obscure
                         ? 'Tampilkan kata sandi'
                         : 'Sembunyikan kata sandi',
-                    icon: Icon(
-                      _obscure
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                    ),
+                    icon: Icon(_obscure ? LucideIcons.eye : LucideIcons.eyeOff),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
@@ -338,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
             if (!kReleaseMode)
               OutlinedButton.icon(
                 onPressed: _fillDemo,
-                icon: const Icon(Icons.bolt),
+                icon: const Icon(LucideIcons.zap),
                 label: const Text('Isi akun demo'),
               ),
           ],

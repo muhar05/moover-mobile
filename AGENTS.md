@@ -74,6 +74,7 @@ Aturan:
 | UI | Material 3, tema custom `mooverTheme()` |
 | Font | Plus Jakarta Sans, dibundel di `assets/fonts/` (OFL) |
 | Animasi | bawaan Flutter (tanpa dependency runtime; `lottie` dihapus 2026-10-10) |
+| Ikon | `lucide_icons_flutter` (MIT, gaya garis V2.1; disetujui 2026-10-11). Jangan pakai `Icons.*` Material |
 | Lint | `flutter_lints` |
 | Test | `flutter_test` |
 | App ID | `com.siagaabdiutama.moover_driver` |

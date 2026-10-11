@@ -1012,6 +1012,63 @@ void main() {
     },
   );
 
+  testWidgets('ikon Lucide (gaya garis V2.1), tanpa Material Icons', (
+    tester,
+  ) async {
+    Future<void> expectLucide(String screen) async {
+      final icons = tester
+          .widgetList<Icon>(find.byType(Icon, skipOffstage: false))
+          .map((i) => i.icon!)
+          .toList();
+      expect(icons, isNotEmpty, reason: screen);
+      for (final icon in icons) {
+        expect(
+          icon.fontPackage,
+          'lucide_icons_flutter',
+          reason: '$screen: ${icon.fontFamily} ${icon.codePoint}',
+        );
+      }
+    }
+
+    await tester.pumpWidget(app());
+    // Gulir semua tab supaya isi ListView yang lazy ikut terbangun.
+    for (final label in tabs) {
+      await tester.tap(tab(label));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(Scrollable).hitTestable().first,
+        const Offset(0, -3000),
+      );
+      await tester.pumpAndSettle();
+      await expectLucide(label);
+    }
+    // Tab terpilih: varian lebih tebal, bukan ikon yang sama.
+    final nav = tester.widget<MooverBottomNavigation>(
+      find.byType(MooverBottomNavigation),
+    );
+    for (final item in nav.items) {
+      expect(item.selectedIcon.fontFamily, isNot(item.icon.fontFamily));
+    }
+
+    await tester.pumpWidget(app(home: const LoginScreen()));
+    await tester.pumpAndSettle();
+    await expectLucide('Login');
+
+    await tester.pumpWidget(
+      app(
+        home: Scaffold(
+          body: Column(
+            children: [
+              const EmptyView(message: 'x'),
+              ErrorView(message: 'y', onRetry: () {}),
+            ],
+          ),
+        ),
+      ),
+    );
+    await expectLucide('state views');
+  });
+
   testWidgets('semantik tab: tombol, label, status terpilih', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(app());

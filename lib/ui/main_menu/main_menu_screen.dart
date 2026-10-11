@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
 import '../core/widgets/widgets.dart';
@@ -26,19 +27,22 @@ class MainMenuScreen extends StatefulWidget {
 }
 
 class _MainMenuScreenState extends State<MainMenuScreen> {
+  // Ikon Lucide (gaya garis V2.1, keputusan pemilik project 2026-10-11).
+  // Lucide tidak punya varian berisi: tab terpilih = garis lebih tebal (500)
+  // + warna primary + pill.
   static const _tabs = <MooverNavItem>[
-    (label: 'Beranda', icon: Icons.home_outlined, selectedIcon: Icons.home),
     (
-      label: 'Trip',
-      icon: Icons.directions_car_outlined,
-      selectedIcon: Icons.directions_car,
+      label: 'Beranda',
+      icon: LucideIcons.house,
+      selectedIcon: LucideIcons.house500,
     ),
+    (label: 'Trip', icon: LucideIcons.car, selectedIcon: LucideIcons.car500),
     (
       label: 'Reimburse',
-      icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long,
+      icon: LucideIcons.receiptText,
+      selectedIcon: LucideIcons.receiptText500,
     ),
-    (label: 'Akun', icon: Icons.person_outline, selectedIcon: Icons.person),
+    (label: 'Akun', icon: LucideIcons.user, selectedIcon: LucideIcons.user500),
   ];
 
   int _index = 0;

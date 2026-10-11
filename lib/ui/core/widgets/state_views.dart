@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../themes/theme.dart';
 
@@ -11,7 +12,7 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _StateMessage(
-    icon: Icons.error_outline,
+    icon: LucideIcons.circleAlert,
     message: message,
     action: OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
   );
@@ -23,7 +24,7 @@ class EmptyView extends StatelessWidget {
   const EmptyView({
     super.key,
     required this.message,
-    this.icon = Icons.inbox_outlined,
+    this.icon = LucideIcons.inbox,
     this.action,
   });
 

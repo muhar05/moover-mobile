@@ -3,8 +3,8 @@ part of 'trip_detail_screen.dart';
 /// S08 Active Trip (KAK §5.1.5), layar penuh tanpa bottom nav (UD1), gaya
 /// V2.1 "Active trip". Back kembali ke Beranda tanpa mengakhiri trip (UD1).
 /// Simulasi tanpa server (keputusan pemilik project 2026-10-13).
-/// ponytail: peta, ETA, jarak, dan lalu lintas V2.1 diganti placeholder
-/// (sumber peta Q-T6, GPS hilang Q-T4/Q-T5, butuh dependency). Tambah tujuan
+/// ponytail: peta tanpa posisi driver; ETA, jarak, dan lalu lintas V2.1
+/// belum ada (sumber rute Q-T6, GPS hilang Q-T4/Q-T5). Tambah tujuan
 /// (S09) belum ada: alurnya Perlu konfirmasi (Q-B4).
 class ActiveTripScreen extends StatelessWidget {
   const ActiveTripScreen({super.key, required this.active});
@@ -20,7 +20,7 @@ class ActiveTripScreen extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Area peta V2.1: placeholder, teks muted di blueTint 5,58:1.
+          // Area peta V2.1. Tanpa titik peta: teks muted di blueTint 5,58:1.
           Container(
             color: MooverColors.blueTint,
             padding: EdgeInsets.fromLTRB(
@@ -55,16 +55,14 @@ class ActiveTripScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Icon(
-                  LucideIcons.map,
-                  size: 40,
-                  color: MooverColors.primary,
-                ),
-                Text(
-                  'Peta rute belum tersedia.',
-                  textAlign: TextAlign.center,
-                  style: muted,
-                ),
+                if (tripPoints[trip.number] case final points?)
+                  _RouteMap(points, height: 240)
+                else
+                  Text(
+                    'Peta rute belum tersedia.',
+                    textAlign: TextAlign.center,
+                    style: muted,
+                  ),
               ],
             ),
           ),

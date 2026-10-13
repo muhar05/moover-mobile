@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
@@ -219,6 +220,18 @@ List<String> _routeParts(Trip t) {
 
 String tripOrigin(Trip t) => _routeParts(t).first;
 String tripDestination(Trip t) => _routeParts(t).last;
+
+// Titik asal → tujuan trip hari ini untuk peta S07/S08 (Leaflet/OSM, KAK
+// §9.2; paket flutter_map disetujui pemilik project 2026-10-13). Koordinat
+// fiktif di Jakarta Pusat/Selatan, sesuai alamat contoh.
+// ponytail: dipisah per nomor trip agar tipe [Trip] tidak berubah; pindah ke
+// data trip saat kontrak API trip Terverifikasi.
+const kantorPusat = LatLng(-6.1865, 106.8340);
+const kantorCabang = LatLng(-6.2607, 106.8105);
+const tripPoints = <String, (LatLng, LatLng)>{
+  'TRP-20261009-0001': (kantorPusat, kantorCabang),
+  'TRP-20261009-0002': (kantorCabang, kantorPusat),
+};
 
 const reimbursements = <Reimburse>[
   (

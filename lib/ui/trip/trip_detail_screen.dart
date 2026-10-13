@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
@@ -42,8 +44,8 @@ const cancelReasons = [
 /// disimulasikan di memori, tanpa server (D10: tanpa klaim berhasil).
 /// Start tidak mensyaratkan clock-in, sama dengan mock web: Perlu konfirmasi
 /// (Q-B2).
-/// ponytail: peta rute + jarak/estimasi/lalu lintas V2.1 belum ada (sumber
-/// peta Q-T6, butuh dependency); nama penumpang belum ada di data mock.
+/// ponytail: jarak/estimasi/lalu lintas V2.1 belum ada (sumber rute Q-T6;
+/// OSM tanpa data lalu lintas); nama penumpang belum ada di data mock.
 class TripDetailScreen extends StatelessWidget {
   const TripDetailScreen({super.key, required this.trip});
 
@@ -82,6 +84,10 @@ class TripDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: MooverSpace.md),
+          if (tripPoints[trip.number] case final points?) ...[
+            _RouteMap(points, height: 180),
+            const SizedBox(height: MooverSpace.md),
+          ],
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18), // V2.1
@@ -365,6 +371,151 @@ class _Passengers extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Peta rute asal → tujuan (Leaflet/OSM, KAK §9.2) untuk S07/S08. Peta
+/// dekoratif bagi pembaca layar: asal, tujuan, dan alamat sudah ada sebagai
+/// teks di layar. Tile gagal dimuat → catatan di atas peta, detail teks tetap
+/// tampil (DESIGN.md S07).
+/// ponytail: garis lurus asal → tujuan dan peta statis (tanpa geser/zoom,
+/// tanpa posisi GPS); ganti dengan geometri rute dari server (OSRM lewat
+/// backend, Q-T6) dan lokasi driver saat izin GPS diputuskan (Q-T4/Q-T5).
+/// Tile OSM publik hanya untuk demo (kebijakan tile.openstreetmap.org); untuk
+/// produksi butuh tile server sendiri/penyedia: Belum ditentukan.
+class _RouteMap extends StatefulWidget {
+  const _RouteMap(this.points, {required this.height});
+
+  final (LatLng, LatLng) points;
+  final double height;
+
+  @override
+  State<_RouteMap> createState() => _RouteMapState();
+}
+
+class _RouteMapState extends State<_RouteMap> {
+  bool _failed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final (origin, destination) = widget.points;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(MooverRadius.card),
+      child: SizedBox(
+        height: widget.height,
+        child: Stack(
+          children: [
+            ExcludeSemantics(
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCameraFit: CameraFit.coordinates(
+                    coordinates: [origin, destination],
+                    padding: const EdgeInsets.all(MooverSpace.xxl),
+                  ),
+                  backgroundColor: MooverColors.blueTint,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.none,
+                  ),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.siagaabdiutama.moover',
+                    errorTileCallback: (_, _, _) {
+                      if (!_failed && mounted) setState(() => _failed = true);
+                    },
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: [origin, destination],
+                        color: MooverColors.primary,
+                        strokeWidth: 4,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: origin,
+                        width: 18,
+                        height: 18,
+                        child: const DecoratedBox(
+                          decoration: ShapeDecoration(
+                            color: MooverColors.surface,
+                            shape: CircleBorder(
+                              side: BorderSide(
+                                color: MooverColors.primary,
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Marker(
+                        point: destination,
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.topCenter, // ujung pin di titik
+                        child: const Icon(
+                          LucideIcons.mapPin,
+                          size: 36,
+                          color: MooverColors.navy,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Atribusi wajib (lisensi ODbL OSM). Bukan
+                  // SimpleAttributionWidget: Row-nya overflow di teks 200%.
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: ColoredBox(
+                      color: MooverColors.surface,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: MooverSpace.xs,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          '© OpenStreetMap',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_failed)
+              Positioned(
+                top: MooverSpace.sm,
+                left: MooverSpace.sm,
+                right: MooverSpace.sm,
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: MooverColors.surface,
+                      borderRadius: BorderRadius.circular(MooverRadius.sm),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: MooverSpace.md,
+                        vertical: MooverSpace.sm,
+                      ),
+                      child: Text(
+                        'Peta tidak dapat dimuat. Periksa koneksi internet.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Action bar bawah (UD2): tombol berdampingan V2.1, [note] di atasnya.

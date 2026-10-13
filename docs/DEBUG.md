@@ -112,6 +112,7 @@ flutter run -d <id-hp> --profile   # cek kelancaran animasi/scroll
 | Clock-in/out (S04) | kamera depan terbuka; izin kamera ditolak → pesan galat muncul, bisa coba lagi; foto tampil di Bukti kehadiran (S05); tombol "Simulasi tanpa kamera" **tidak ada** di build release |
 | Time Log (S05) | ringkasan dan filter; foto asli di sheet Bukti kehadiran |
 | Trip (S07–S10) | Beranda → ketuk jadwal → Mulai trip (dialog) → S08; tombol Back HP kembali ke Beranda, banner "Trip berjalan · Lanjutkan" tampil di semua tab; Akhiri trip (centang) → S10 → Selesai; Batalkan dengan alasan |
+| Peta rute (S07–S08) | build **release**: tile OSM tampil di S07 dan S08 dengan garis asal → tujuan dan "© OpenStreetMap"; mode pesawat → "Peta tidak dapat dimuat…", detail trip tetap tampil; TalkBack melewati peta |
 | Riwayat trip (S12–S13) | tab Trip → Riwayat → ketuk item → S13 (rating + komentar / menunggu feedback / alasan batal); "Cari & filter" → S12: ketik kata kunci, chip status, rentang tanggal (kalender), Reset filter; trip yang diakhiri/dibatalkan hari ini muncul di Riwayat |
 | TalkBack / VoiceOver | S12, S13 (kartu feedback dibaca "N dari 5"); S07, S08, S10, banner trip; Beranda, S04, S05: urutan baca, header, label tombol ikon, kartu dibaca utuh |
 | Teks 200% | *Pengaturan → Ukuran font* maksimum: tidak ada teks terpotong di semua tab, S04, S05, S07, S08, S10, S12, S13, kalender rentang tanggal, sheet Batalkan/Akhiri |

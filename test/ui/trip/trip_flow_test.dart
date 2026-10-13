@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moover/ui/core/themes/theme.dart';
 import 'package:moover/ui/core/widgets/widgets.dart';
@@ -213,6 +214,68 @@ void main() {
       findsOneWidget,
     );
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    handle.dispose();
+  });
+
+  testWidgets('peta rute S07/S08: OSM + atribusi, dekoratif, fallback', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    // Tile yang tertunda dari tes lain (zona waktu palsu) jangan dipakai
+    // ulang: harus dimuat, dan gagal, lagi.
+    imageCache.clear();
+    await tester.pumpWidget(app(home: TripDetailScreen(trip: first)));
+    await tester.pumpAndSettle();
+    final map = find.byType(FlutterMap);
+    expect(map, findsOneWidget);
+    final (origin, destination) = tripPoints[first.number]!;
+    expect(
+      tester
+          .widget<PolylineLayer>(find.byType(PolylineLayer))
+          .polylines
+          .single
+          .points,
+      [origin, destination],
+    );
+    expect(
+      tester.widget<TileLayer>(find.byType(TileLayer)).urlTemplate,
+      contains('tile.openstreetmap.org'),
+    );
+    expect(find.text('© OpenStreetMap'), findsOneWidget);
+    // Isi peta tidak dibaca TalkBack (rute sudah ada sebagai teks).
+    expect(
+      find.ancestor(of: map, matching: find.byType(ExcludeSemantics)),
+      findsWidgets,
+    );
+    // Tile tidak bisa diambil di tes (HTTP 400): catatan tampil, detail tetap.
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+    }
+    expect(
+      find.text('Peta tidak dapat dimuat. Periksa koneksi internet.'),
+      findsOneWidget,
+    );
+    expect(find.text('Waktu jemput'), findsOneWidget);
+
+    await tester.pumpWidget(
+      app(
+        home: ActiveTripScreen(
+          active: (trip: first, startedAt: DateTime(2030, 1, 1, 9, 5)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.text('Peta rute belum tersedia.'), findsNothing);
+
+    // Trip tanpa titik peta: tanpa peta.
+    final noPoints = tripHistory.first;
+    expect(tripPoints[noPoints.number], isNull);
+    await tester.pumpWidget(app(home: TripDetailScreen(trip: noPoints)));
+    expect(find.byType(FlutterMap), findsNothing);
     handle.dispose();
   });
 

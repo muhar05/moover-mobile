@@ -108,12 +108,17 @@ class _HomeTabState extends State<_HomeTab> {
         ],
       ),
       children: [
-        _Section(
-          title: 'Jadwal hari ini',
-          trailing: '${tripsToday.length} trip',
-          children: [
-            for (final (i, t) in tripsToday.indexed) _TripItem(t, next: i == 0),
-          ],
+        // Kartu jadwal membuka S07/S08 (2026-10-13); status ikut simulasi.
+        ListenableBuilder(
+          listenable: tripStatus,
+          builder: (context, _) => _Section(
+            title: 'Jadwal hari ini',
+            trailing: '${tripsToday.length} trip',
+            children: [
+              for (final (i, t) in tripsToday.indexed)
+                _TripItem(t, next: i == 0, onTap: () => openTrip(context, t)),
+            ],
+          ),
         ),
         _Section(
           title: 'Reimburse terakhir',

@@ -90,3 +90,31 @@ flutter test --plain-name "tab Reimburse"             # satu tes berdasarkan nam
 | build Gradle error setelah ganti branch | `flutter clean && flutter pub get && flutter run` |
 | app versi lama (APK profile) masih terpasang | `flutter run` akan menimpanya; atau `adb uninstall com.siagaabdiutama.moover` |
 | emulator berat/lambat | tutup lalu cold boot: `emulator -avd Pixel_4 -no-snapshot-load` |
+
+## 7. Uji di HP fisik
+
+Keputusan pemilik project 2026-10-13: verifikasi visual dan perangkat dilakukan di HP fisik, bukan emulator. Fitur dibangun sampai lolos tes otomatis (§5), lalu dicek di HP memakai daftar di bawah.
+
+**Android:** aktifkan *Opsi developer → USB debugging*, sambungkan kabel, izinkan sidik jari komputer di HP, lalu:
+
+```bash
+flutter devices                    # HP muncul dengan ID-nya
+flutter run -d <id-hp>             # debug + hot reload
+flutter run -d <id-hp> --profile   # cek kelancaran animasi/scroll
+```
+
+**iOS:** buka `ios/Runner.xcworkspace` di Xcode, pilih Team untuk signing, lalu `flutter run -d <id-iphone>`.
+
+### Daftar yang belum terverifikasi (centang setelah dicek di HP)
+
+| Fitur | Yang dicek |
+|---|---|
+| Clock-in/out (S04) | kamera depan terbuka; izin kamera ditolak → pesan galat muncul, bisa coba lagi; foto tampil di Bukti kehadiran (S05); tombol "Simulasi tanpa kamera" **tidak ada** di build release |
+| Time Log (S05) | ringkasan dan filter; foto asli di sheet Bukti kehadiran |
+| Trip (S07–S10) | Beranda → ketuk jadwal → Mulai trip (dialog) → S08; tombol Back HP kembali ke Beranda, banner "Trip berjalan · Lanjutkan" tampil di semua tab; Akhiri trip (centang) → S10 → Selesai; Batalkan dengan alasan |
+| Riwayat trip (S12–S13) | tab Trip → Riwayat → ketuk item → S13 (rating + komentar / menunggu feedback / alasan batal); "Cari & filter" → S12: ketik kata kunci, chip status, rentang tanggal (kalender), Reset filter; trip yang diakhiri/dibatalkan hari ini muncul di Riwayat |
+| TalkBack / VoiceOver | S12, S13 (kartu feedback dibaca "N dari 5"); S07, S08, S10, banner trip; Beranda, S04, S05: urutan baca, header, label tombol ikon, kartu dibaca utuh |
+| Teks 200% | *Pengaturan → Ukuran font* maksimum: tidak ada teks terpotong di semua tab, S04, S05, S07, S08, S10, S12, S13, kalender rentang tanggal, sheet Batalkan/Akhiri |
+| Reduced motion | *Hapus animasi* aktif: carousel Landing berhenti, animasi mobil diam |
+| Performa | build `--profile`: scroll dan transisi halus, tanpa jank |
+| iOS | semua baris di atas di iPhone |

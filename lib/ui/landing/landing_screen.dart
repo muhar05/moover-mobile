@@ -8,7 +8,7 @@ import '../login/login_screen.dart';
 
 /// S01 Landing (DESIGN.md §6.3, Usulan aktif; KAK §5.1.1). Register tidak
 /// ditampilkan: registrasi melalui admin (KAK §5.1.1).
-///
+///A
 /// Keputusan pemilik project 2026-10-10 (belum di DESIGN.md planning):
 /// mengikuti halaman Welcome V2.1, tanpa Skip dan "Create an account",
 /// ilustrasi Lottie diganti carousel foto autoplay, copy Bahasa Indonesia.

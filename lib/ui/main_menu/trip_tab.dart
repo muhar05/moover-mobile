@@ -22,7 +22,6 @@ class _TripTab extends StatelessWidget {
 
   Widget _build(BuildContext context, {required bool clockedIn}) {
     final textTheme = Theme.of(context).textTheme;
-    final dates = {for (final t in tripHistory) t.date};
     return _TabPage(
       header: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -129,31 +128,54 @@ class _TripTab extends StatelessWidget {
           ],
         ),
         const _TipsCard(),
-        // S12 Riwayat dikelompokkan per tanggal (urutan data).
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: MooverSpace.lg,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                'Riwayat',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+        // Riwayat dikelompokkan per tanggal (urutan data), termasuk trip
+        // hari ini yang diakhiri/dibatalkan di simulasi. Cari & filter di
+        // S12; item membuka S13 (2026-10-13).
+        ListenableBuilder(
+          listenable: tripStatus,
+          builder: (context, _) {
+            final trips = pastTrips();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: MooverSpace.lg,
+              children: [
+                spread(
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Riwayat',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const TripHistoryScreen(),
+                      ),
+                    ),
+                    icon: const Icon(LucideIcons.search),
+                    label: const Text('Cari & filter'),
+                  ),
                 ),
-              ),
-            ),
-            for (final date in dates)
-              _Section(
-                title: date,
-                trailing:
-                    '${tripHistory.where((t) => t.date == date).length} trip',
-                children: [
-                  for (final t in tripHistory.where((t) => t.date == date))
-                    _TripItem(t),
-                ],
-              ),
-          ],
+                for (final date in {for (final t in trips) t.date})
+                  _Section(
+                    title: date,
+                    trailing:
+                        '${trips.where((t) => t.date == date).length} trip',
+                    children: [
+                      for (final t in trips.where((t) => t.date == date))
+                        _TripItem(
+                          t,
+                          history: true,
+                          onTap: () => openTrip(context, t),
+                        ),
+                    ],
+                  ),
+              ],
+            );
+          },
         ),
       ],
     );

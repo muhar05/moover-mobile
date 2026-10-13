@@ -6,9 +6,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../attendance/attendance_screen.dart';
 import '../core/themes/theme.dart';
+import '../core/widgets/spread.dart';
 import '../core/widgets/widgets.dart';
 import '../login/login_screen.dart';
 import '../time_log/time_log_screen.dart';
+import '../trip/trip_detail_screen.dart';
 import 'mock_data.dart';
 
 part 'account_tab.dart';
@@ -64,10 +66,78 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
           _AccountTab(),
         ],
       ),
-      bottomNavigationBar: MooverBottomNavigation(
-        items: _tabs,
-        selectedIndex: _index,
-        onSelected: (i) => setState(() => _index = i),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // UD1 (Usulan aktif): banner trip berjalan di atas bottom nav,
+          // semua tab.
+          ListenableBuilder(
+            listenable: activeTrip,
+            builder: (context, _) => switch (activeTrip.value) {
+              final active? => _ActiveTripBanner(active.trip),
+              null => const SizedBox.shrink(),
+            },
+          ),
+          MooverBottomNavigation(
+            items: _tabs,
+            selectedIndex: _index,
+            onSelected: (i) => setState(() => _index = i),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Banner "Trip berjalan · Lanjutkan" (UD1): satu target sentuh ke S08.
+/// Navy + putih 14,9:1, tujuan sky 9,54:1.
+class _ActiveTripBanner extends StatelessWidget {
+  const _ActiveTripBanner(this.trip);
+
+  final Trip trip;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Material(
+      color: MooverColors.navy,
+      child: InkWell(
+        onTap: () => openTrip(context, trip),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: MooverSpace.screen,
+            vertical: MooverSpace.md,
+          ),
+          child: Row(
+            spacing: MooverSpace.md,
+            children: [
+              const Icon(LucideIcons.carFront, color: MooverColors.cyan),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Trip berjalan · Lanjutkan',
+                      style: textTheme.titleSmall?.copyWith(
+                        color: MooverColors.surface,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Ke ${tripDestination(trip)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: MooverColors.sky,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(LucideIcons.chevronRight, color: MooverColors.surface),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -286,24 +356,37 @@ class _Section extends StatelessWidget {
 }
 
 class _TripItem extends StatelessWidget {
-  const _TripItem(this.trip, {this.next = false});
+  const _TripItem(
+    this.trip, {
+    this.next = false,
+    this.history = false,
+    this.onTap,
+  });
 
   final Trip trip;
   final bool next;
+  final bool history;
+  final VoidCallback? onTap;
 
   @override
-  // V2.1: jadwal hari ini = tujuan + alamat (Home); riwayat = rute asal →
-  // tujuan (Trip history). Pembeda: hanya jadwal hari ini punya alamat.
-  Widget build(BuildContext context) => MooverTripItem(
-    time: trip.time,
-    origin: trip.address == null ? tripOrigin(trip) : null,
-    destination: tripDestination(trip),
-    address: trip.address,
-    status: trip.status,
-    tone: trip.tone,
-    passengers: trip.passengers,
-    next: next,
-  );
+  // V2.1: jadwal hari ini = tujuan + alamat (Home); [history] = rute asal →
+  // tujuan tanpa alamat (Trip history), juga untuk trip hari ini yang sudah
+  // diakhiri/dibatalkan.
+  Widget build(BuildContext context) {
+    // Status simulasi Start/Cancel/End menimpa status mock (2026-10-13).
+    final (status, tone) = statusOf(trip);
+    return MooverTripItem(
+      time: trip.time,
+      origin: history ? tripOrigin(trip) : null,
+      destination: tripDestination(trip),
+      address: history ? null : trip.address,
+      status: status,
+      tone: tone,
+      passengers: trip.passengers,
+      next: next,
+      onTap: onTap,
+    );
+  }
 }
 
 class _ReimburseItem extends StatelessWidget {

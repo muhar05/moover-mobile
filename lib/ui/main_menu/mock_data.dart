@@ -6,6 +6,8 @@ import '../core/themes/theme.dart';
 // MOCK/DEMO: data contoh untuk kerangka UI, bukan data server. Label status
 // dari DESIGN.md §4.7, tone dari Lampiran A.2. Format D4.
 typedef Trip = ({
+  // Format nomor TRP-YYYYMMDD-NNNN dari mock web (belum Terverifikasi).
+  String number,
   String date,
   String time,
   String route,
@@ -27,6 +29,7 @@ typedef Reimburse = ({
 
 const tripsToday = <Trip>[
   (
+    number: 'TRP-20261009-0001',
     date: '9 Okt 2026',
     time: '09.30 WIB',
     route: 'Kantor Pusat → Kantor Cabang (contoh)',
@@ -36,6 +39,7 @@ const tripsToday = <Trip>[
     tone: StatusTone.neutral,
   ),
   (
+    number: 'TRP-20261009-0002',
     date: '9 Okt 2026',
     time: '13.00 WIB',
     route: 'Kantor Cabang → Kantor Pusat (contoh)',
@@ -48,6 +52,7 @@ const tripsToday = <Trip>[
 
 const tripHistory = <Trip>[
   (
+    number: 'TRP-20261008-0003',
     date: '8 Okt 2026',
     time: '14.00 WIB',
     route: 'Kantor Pusat → Bandara (contoh)',
@@ -57,6 +62,7 @@ const tripHistory = <Trip>[
     tone: StatusTone.ok,
   ),
   (
+    number: 'TRP-20261008-0001',
     date: '8 Okt 2026',
     time: '08.00 WIB',
     route: 'Kantor Pusat → Kantor Cabang (contoh)',
@@ -66,6 +72,7 @@ const tripHistory = <Trip>[
     tone: StatusTone.warn,
   ),
   (
+    number: 'TRP-20261007-0002',
     date: '7 Okt 2026',
     time: '10.00 WIB',
     route: 'Kantor Cabang → Kantor Pusat (contoh)',
@@ -74,6 +81,78 @@ const tripHistory = <Trip>[
     status: 'Dibatalkan',
     tone: StatusTone.err,
   ),
+];
+
+// Simulasi Start/Cancel/End Trip (keputusan pemilik project 2026-10-13,
+// belum di DESIGN.md): status trip hari ini disimpan per nomor trip dan
+// menimpa status mock. Label §4.7; tone: On Trip = indigo, sama dengan web
+// (A.2), bukan live V2.1 (keputusan pemilik project 2026-10-13). Indigo di
+// latarnya ≥4,5:1 (diuji di design_system_test).
+// ponytail: hanya di memori seperti [clockIn]; ganti dengan data server saat
+// API trip Terverifikasi.
+typedef TripStatus = (String, StatusTone);
+const onTrip = ('Dalam Perjalanan', StatusTone.indigo);
+const waitingFeedback = ('Menunggu Feedback', StatusTone.warn);
+const canceled = ('Dibatalkan', StatusTone.err);
+
+final tripStatus = ValueNotifier<Map<String, TripStatus>>({});
+
+/// Trip yang sedang berjalan + waktu Start; null = tidak ada. Satu trip
+/// berjalan dalam satu waktu: Usulan, Perlu konfirmasi (Q-B2).
+typedef ActiveTrip = ({Trip trip, DateTime startedAt});
+final activeTrip = ValueNotifier<ActiveTrip?>(null);
+
+TripStatus statusOf(Trip t) => tripStatus.value[t.number] ?? (t.status, t.tone);
+
+/// [result] dicatat lebih dulu agar pendengar [tripStatus] membacanya.
+void setTripStatus(Trip t, TripStatus status, [TripResult? result]) {
+  if (result != null) tripResults[t.number] = result;
+  tripStatus.value = {...tripStatus.value, t.number: status};
+}
+
+/// Hasil trip untuk S13: jam Start/End Trip ("HH.MM WIB"), rating 1–5 +
+/// komentar penumpang (KAK §5.2.1), alasan batal. null = tidak ada/belum.
+typedef TripResult = ({
+  String? start,
+  String? arrival,
+  int? rating,
+  String? comment,
+  String? reason,
+});
+
+// Riwayat contoh (fiktif) + hasil simulasi End/Cancel per nomor trip.
+// ponytail: hanya di memori seperti [tripStatus]; ganti dengan data server
+// saat API trip dan feedback Terverifikasi.
+final tripResults = <String, TripResult>{
+  'TRP-20261008-0003': (
+    start: '14.05 WIB',
+    arrival: '14.50 WIB',
+    rating: 4,
+    comment: 'Perjalanan nyaman dan tepat waktu. (contoh)',
+    reason: null,
+  ),
+  'TRP-20261008-0001': (
+    start: '08.00 WIB',
+    arrival: '08.40 WIB',
+    rating: null,
+    comment: null,
+    reason: null,
+  ),
+  'TRP-20261007-0002': (
+    start: null,
+    arrival: null,
+    rating: null,
+    comment: null,
+    reason: 'Jadwal berubah',
+  ),
+};
+
+/// Trip yang sudah lewat, terbaru dulu: trip hari ini yang diakhiri atau
+/// dibatalkan di simulasi, lalu [tripHistory].
+List<Trip> pastTrips() => [
+  for (final t in tripsToday.reversed)
+    if (!{'Terjadwal', onTrip.$1}.contains(statusOf(t).$1)) t,
+  ...tripHistory,
 ];
 
 /// Satu absensi: waktu + foto bukti. [photo] null = foto simulasi/contoh.

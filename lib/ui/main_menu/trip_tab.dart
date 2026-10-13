@@ -4,7 +4,7 @@ part of 'main_menu_screen.dart';
 /// 2026-10-10, belum di DESIGN.md): status Available, kartu trip tambahan,
 /// jenis trip tambahan, kendaraan, tips, lalu Riwayat (S12). Segmen "Hari
 /// ini" dihapus: jadwal hari ini sudah di Beranda. V2.1 memakai toggle
-/// Available manual; di sini Available = sudah clock-in (keputusan
+/// Available manual; di sini Available = clock-in, belum clock-out (keputusan
 /// 2026-10-10), jadwal hanya ditampilkan.
 class _TripTab extends StatelessWidget {
   const _TripTab();
@@ -12,9 +12,12 @@ class _TripTab extends StatelessWidget {
   // MOCK/DEMO. ponytail: form Add New Trip (S11) belum dibuat (Q-B1);
   // ganti dengan navigasi ke S11 saat aturannya dikonfirmasi.
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: clockInTime,
-    builder: (context, inAt, _) => _build(context, clockedIn: inAt != null),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([clockIn, clockOut]),
+    builder: (context, _) => _build(
+      context,
+      clockedIn: clockIn.value != null && clockOut.value == null,
+    ),
   );
 
   Widget _build(BuildContext context, {required bool clockedIn}) {

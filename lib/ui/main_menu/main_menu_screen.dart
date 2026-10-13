@@ -8,6 +8,7 @@ import '../attendance/attendance_screen.dart';
 import '../core/themes/theme.dart';
 import '../core/widgets/widgets.dart';
 import '../login/login_screen.dart';
+import '../time_log/time_log_screen.dart';
 import 'mock_data.dart';
 
 part 'account_tab.dart';

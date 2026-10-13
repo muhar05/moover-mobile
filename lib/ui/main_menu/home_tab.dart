@@ -69,33 +69,41 @@ class _HomeTabState extends State<_HomeTab> {
               const _Avatar(size: 48, ring: 2, border: MooverColors.navy),
             ],
           ),
-          ValueListenableBuilder(
-            valueListenable: clockInTime,
-            builder: (context, inAt, _) => MooverAgendaCard(
-              date: formatDate(_now),
-              clock: formatClock(_now),
-              tripCount: tripsToday.length,
-              clockInStatus: inAt == null
-                  ? 'Belum clock-in hari ini.'
-                  : 'Clock-in ${formatClock(inAt).substring(0, 5)} WIB',
-              clockedIn: inAt != null,
-              operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
-              shiftProgress: _shiftProgress(_now),
-              // ponytail: clock-out (V2.1 "Shift complete") belum dibuat;
-              // tambahkan bersama aturan K7 (Incomplete).
-              action: inAt == null
-                  ? FilledButton.icon(
-                      onPressed: () => _clockIn(context),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                        backgroundColor: MooverColors.cyan,
-                        foregroundColor: MooverColors.navy,
-                      ),
-                      icon: const Icon(LucideIcons.scanFace),
-                      label: const Text('Clock-in'),
-                    )
-                  : null,
-            ),
+          ListenableBuilder(
+            listenable: Listenable.merge([clockIn, clockOut]),
+            builder: (context, _) {
+              final inAt = clockIn.value?.at;
+              // V2.1: setelah clock-out, kartu agenda diganti ringkasan.
+              if ((inAt, clockOut.value?.at) case (final i?, final o?)) {
+                return _ClockedOutCard((
+                  clockIn: clockIn.value!,
+                  clockOut: clockOut.value!,
+                ), key: ValueKey((i, o)));
+              }
+              return MooverAgendaCard(
+                date: formatDate(_now),
+                clock: formatClock(_now),
+                tripCount: tripsToday.length,
+                clockInStatus: inAt == null
+                    ? 'Belum clock-in hari ini.'
+                    : 'Clock-in ${formatHm(inAt)} WIB',
+                clockedIn: inAt != null,
+                operatingHours: 'Jam operasional 07.30–16.30', // KAK §5.1.2.
+                shiftProgress: _shiftProgress(_now),
+                action: FilledButton.icon(
+                  onPressed: () => _punch(context, out: inAt != null),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    backgroundColor: MooverColors.cyan,
+                    foregroundColor: MooverColors.navy,
+                  ),
+                  icon: Icon(
+                    inAt == null ? LucideIcons.scanFace : LucideIcons.logOut,
+                  ),
+                  label: Text(inAt == null ? 'Clock-in' : 'Clock-out'),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -116,26 +124,125 @@ class _HomeTabState extends State<_HomeTab> {
   }
 }
 
-/// Buka S04; simpan waktu yang dikembalikan. Simulasi tanpa server (D10):
-/// pesan menyebut belum terkirim, bukan "berhasil".
-Future<void> _clockIn(BuildContext context) async {
+/// Buka S04 (clock-in atau [out] clock-out); simpan hasilnya. Simulasi
+/// tanpa server (D10): pesan menyebut belum terkirim, bukan "berhasil".
+Future<void> _punch(BuildContext context, {required bool out}) async {
   final messenger = ScaffoldMessenger.of(context);
-  final at = await Navigator.of(
-    context,
-  ).push<DateTime>(MaterialPageRoute(builder: (_) => const AttendanceScreen()));
-  if (at == null) return;
-  clockInTime.value = at;
+  final punch = await Navigator.of(context).push<Punch>(
+    MaterialPageRoute(builder: (_) => AttendanceScreen(clockOut: out)),
+  );
+  if (punch == null) return;
+  (out ? clockOut : clockIn).value = punch;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
         content: Text(
-          'Clock-in ${formatClock(at).substring(0, 5)} WIB tercatat di '
-          'simulasi (belum dikirim ke server).',
+          '${out ? 'Clock-out' : 'Clock-in'} ${formatHm(punch.at)} WIB '
+          'tercatat di simulasi (belum dikirim ke server).',
         ),
       ),
     );
 }
+
+/// Kartu putih V2.1 "You're clocked out": Masuk / Keluar / Total, status
+/// kehadiran (§4.7, V2.1 tidak menampilkannya; ditambah agar Tidak Lengkap
+/// terlihat), tautan ke Time Log. Radius V2.1 24 = lg.
+class _ClockedOutCard extends StatelessWidget {
+  const _ClockedOutCard(this.log, {super.key});
+
+  final TimeLog log;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final (status, tone) = attendanceStatus(log);
+    final worked = log.clockOut.at.difference(log.clockIn.at);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: MooverColors.surface,
+        borderRadius: BorderRadius.circular(MooverRadius.lg),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18), // V2.1
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 14, // V2.1
+          children: [
+            Row(
+              spacing: MooverSpace.md,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: StatusTone.ok.background,
+                    borderRadius: BorderRadius.circular(MooverRadius.input),
+                  ),
+                  child: Icon(
+                    LucideIcons.circleCheck,
+                    color: StatusTone.ok.foreground,
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 2,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          'Anda sudah clock-out',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Sampai besok, hati-hati di jalan.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: MooverColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: StatusBadge(label: status, tone: tone),
+            ),
+            MooverShiftTimes(
+              clockIn: formatHm(log.clockIn.at),
+              clockOut: formatHm(log.clockOut.at),
+              total: formatDuration(worked),
+              totalColor: tone.foreground,
+              fill: true,
+            ),
+            OutlinedButton(
+              onPressed: () => _openTimeLog(context),
+              // V2.1: tinggi 48, radius 14, tepi biru muda.
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                foregroundColor: MooverColors.primary,
+                side: const BorderSide(color: MooverColors.sky, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(MooverRadius.input),
+                ),
+              ),
+              child: const Text('Lihat time log'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _openTimeLog(BuildContext context) =>
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const TimeLogScreen()));
 
 /// Sapaan menurut jam (V2.1: <11 pagi, <15 siang, <19 sore, sisanya malam).
 String greeting(int hour) => hour < 11

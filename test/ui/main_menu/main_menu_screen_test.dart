@@ -7,8 +7,9 @@ import 'package:moover/ui/core/widgets/widgets.dart';
 import 'package:moover/ui/landing/landing_screen.dart';
 import 'package:moover/ui/login/login_screen.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
+import 'package:moover/ui/time_log/time_log_screen.dart';
 import 'package:moover/ui/main_menu/mock_data.dart'
-    show clockInTime, demoDriverEmail, vehicle;
+    show clockIn, clockOut, demoDriverEmail, vehicle;
 
 import '../core/design_system_test.dart' show contrast;
 
@@ -80,7 +81,7 @@ int selectedTab(WidgetTester tester) => tester
 
 void main() {
   // Status clock-in simulasi global (ValueNotifier): reset tiap tes.
-  setUp(() => clockInTime.value = null);
+  setUp(() => clockIn.value = clockOut.value = null);
 
   testWidgets('tepat empat tab dengan label yang ditentukan; awal Beranda', (
     tester,
@@ -671,7 +672,8 @@ void main() {
     expect(iconColor('Time Log'), StatusTone.info.foreground);
     expect(iconColor('Hubungi support'), StatusTone.live.foreground);
 
-    // Tiap baris satu tombol berlabel; ketuk = belum tersedia.
+    // Tiap baris satu tombol berlabel; ketuk = belum tersedia, kecuali
+    // Time Log (S05 sudah ada, dites terpisah).
     for (final m in [...groups.values.expand((m) => m)]) {
       final row = find.text(m).last;
       expect(
@@ -680,6 +682,7 @@ void main() {
         reason: m,
       );
       expect(tester.getSemantics(row).label, startsWith(m));
+      if (m == 'Time Log') continue;
       await tester.tap(row);
       await tester.pump();
       expect(find.text('$m belum tersedia.'), findsOneWidget, reason: m);
@@ -789,7 +792,7 @@ void main() {
 
     // Available = sudah clock-in (keputusan 2026-10-10). Mock: belum
     // clock-in, sejalan dengan Beranda. Status teks, bukan toggle.
-    expect(clockInTime.value, isNull);
+    expect(clockIn.value, isNull);
     expect(find.text('Belum clock-in hari ini.'), findsNothing);
     expect(find.byType(Switch), findsNothing);
     final badge = tester.widget<StatusBadge>(find.byType(StatusBadge).first);
@@ -1189,20 +1192,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AttendanceScreen), findsNothing);
-    final at = clockInTime.value!;
+    final at = clockIn.value!.at;
     final hhmm = formatClock(at).substring(0, 5);
     final agenda = find.byType(MooverAgendaCard);
     expect(
       find.descendant(of: agenda, matching: find.text('Clock-in $hhmm WIB')),
       findsOneWidget,
     );
-    // Sudah clock-in: tombol hilang, pill cyan.
+    // Sudah clock-in: Clock-in diganti Clock-out (2026-10-13), pill cyan.
     expect(
-      find.descendant(
-        of: agenda,
-        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
-      ),
+      find.descendant(of: agenda, matching: find.text('Clock-in')),
       findsNothing,
+    );
+    expect(
+      find.descendant(of: agenda, matching: find.text('Clock-out')),
+      findsOneWidget,
     );
     expect(
       tester.widget<Text>(find.text('Clock-in $hhmm WIB')).style!.color,
@@ -1227,8 +1231,77 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Kembali'));
     await tester.pumpAndSettle();
-    expect(clockInTime.value, isNull);
+    expect(clockIn.value, isNull);
     expect(find.text('Belum clock-in hari ini.'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('simulasi clock-out: kartu ringkasan, Time Log, Trip berhenti', (
+    tester,
+  ) async {
+    clockIn.value = (at: DateTime(2030, 1, 2, 7, 5), photo: null);
+    await tester.pumpWidget(app());
+    final agenda = find.byType(MooverAgendaCard);
+    await tester.tap(
+      find.descendant(of: agenda, matching: find.text('Clock-out')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AttendanceScreen), findsOneWidget);
+    expect(find.text('Clock-out'), findsOneWidget); // judul S04
+
+    await tester.tap(find.text('Simulasi tanpa kamera'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Kirim clock-out'));
+    await tester.pump();
+    await tester.tap(find.text('Kirim clock-out'));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    final out = clockOut.value!.at;
+    expect(clockIn.value!.at, DateTime(2030, 1, 2, 7, 5)); // tetap
+    // Kartu agenda diganti ringkasan V2.1.
+    expect(agenda, findsNothing);
+    expect(find.text('Anda sudah clock-out'), findsOneWidget);
+    expect(find.text('07.05'), findsOneWidget);
+    expect(find.text(formatHm(out)), findsOneWidget);
+    final (status, _) = attendanceStatus((
+      clockIn: clockIn.value!,
+      clockOut: clockOut.value!,
+    ));
+    expect(find.widgetWithText(StatusBadge, status), findsOneWidget);
+    // D10: simulasi, bukan berhasil.
+    expect(
+      find.text(
+        'Clock-out ${formatHm(out)} WIB tercatat di simulasi '
+        '(belum dikirim ke server).',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('berhasil'), findsNothing);
+
+    await tester.tap(find.text('Lihat time log'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimeLogScreen), findsOneWidget);
+    expect(find.byType(Card), findsWidgets);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    // Sudah clock-out: tidak Available lagi (sama dengan mock web).
+    await tester.tap(tab('Trip'));
+    await tester.pumpAndSettle();
+    final badge = tester.widget<StatusBadge>(find.byType(StatusBadge).first);
+    expect((badge.label, badge.tone), ('Tidak bertugas', StatusTone.neutral));
+  });
+
+  testWidgets('Akun → Time Log membuka S05', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Time Log'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Time Log'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimeLogScreen), findsOneWidget);
+    expect(find.text('Time Log belum tersedia.'), findsNothing);
   });
 }

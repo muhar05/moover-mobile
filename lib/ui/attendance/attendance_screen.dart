@@ -11,6 +11,8 @@ import '../core/themes/theme.dart';
 import '../core/widgets/spread.dart';
 import '../core/widgets/widgets.dart';
 import '../main_menu/main_menu_screen.dart' show formatClock, formatDate;
+import '../main_menu/mock_data.dart' show Punch;
+import '../time_log/time_log_screen.dart' show shiftEnd;
 
 /// S04 Absensi: clock-in dengan foto + lokasi + waktu (KAK §5.1.2, §6.1),
 /// gaya V2.1 "Clock in". Keputusan pemilik project 2026-10-11 (belum di
@@ -20,8 +22,12 @@ import '../main_menu/main_menu_screen.dart' show formatClock, formatDate;
 /// mengembalikan waktu clock-in ke pemanggil, tanpa klaim berhasil (D10).
 /// ponytail: latar V2.1 #0B1220 diganti navy (token yang ada); garis oval
 /// putus-putus + garis pindai beranimasi diganti oval garis penuh.
+/// [clockOut]: layar yang sama untuk clock-out (KAK §6.1: foto + lokasi +
+/// waktu juga wajib), keputusan pemilik project 2026-10-13.
 class AttendanceScreen extends StatefulWidget {
-  const AttendanceScreen({super.key});
+  const AttendanceScreen({super.key, this.clockOut = false});
+
+  final bool clockOut;
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -89,13 +95,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     setState(() => _busy = true);
     // Simulasi jeda kirim agar state busy (D10) bisa ditinjau.
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (mounted) Navigator.of(context).pop(DateTime.now());
+    if (mounted) {
+      Navigator.of(context).pop<Punch>((at: DateTime.now(), photo: _photoPath));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final shot = _shotAt;
+    final kind = widget.clockOut ? 'clock-out' : 'clock-in';
+    // KAK §6.8: clock-out sebelum jam operasional berakhir = Tidak Lengkap.
+    final early = widget.clockOut && _now.hour * 60 + _now.minute < shiftEnd;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -137,7 +148,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                           child: Semantics(
                             header: true,
                             child: Text(
-                              'Clock-in',
+                              widget.clockOut ? 'Clock-out' : 'Clock-in',
                               textAlign: TextAlign.center,
                               style: textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -193,7 +204,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                               ),
                             ),
                           ] else ...[
-                            _Photo(path: _photoPath),
+                            _Photo(path: _photoPath, kind: kind),
                             Text(
                               'Foto diambil · ${formatClock(shot)}',
                               textAlign: TextAlign.center,
@@ -265,13 +276,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   _Sheet(
                     now: _now,
                     // Usulan aktif (UD2): aksi utama di bawah, ≥52dp.
+                    warning: early
+                        ? 'Sebelum 16.30: status kehadiran hari ini Tidak '
+                              'Lengkap.'
+                        : null,
                     action: shot == null
                         ? const PrimaryButton(
                             label: 'Ambil foto untuk lanjut',
                             onPressed: null,
                           )
                         : PrimaryButton(
-                            label: 'Kirim clock-in',
+                            label: 'Kirim $kind',
                             onPressed: _submit,
                             busy: _busy,
                           ),
@@ -289,9 +304,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 /// Foto selfie bulat bertepi cyan + tanda centang (V2.1). [path] null =
 /// foto simulasi (emulator).
 class _Photo extends StatelessWidget {
-  const _Photo({required this.path});
+  const _Photo({required this.path, required this.kind});
 
   final String? path;
+  final String kind;
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +334,7 @@ class _Photo extends StatelessWidget {
               : Image.file(
                   File(path),
                   fit: BoxFit.cover,
-                  semanticLabel: 'Foto clock-in Anda',
+                  semanticLabel: 'Foto $kind Anda',
                 ),
         ),
         Positioned(
@@ -346,11 +362,12 @@ class _Photo extends StatelessWidget {
 }
 
 /// Lembar putih bawah: tanggal + jam berjalan, jam operasional, lokasi
-/// MOCK, lalu [action].
+/// MOCK, [warning] opsional, lalu [action].
 class _Sheet extends StatelessWidget {
-  const _Sheet({required this.now, required this.action});
+  const _Sheet({required this.now, this.warning, required this.action});
 
   final DateTime now;
+  final String? warning;
   final Widget action;
 
   @override
@@ -454,6 +471,15 @@ class _Sheet extends StatelessWidget {
                 ),
               ),
             ),
+            if (warning case final warning?)
+              // Teks + warna (D7): warn di putih 6,4:1.
+              Text(
+                warning,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: StatusTone.warn.foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             action,
           ],
         ),

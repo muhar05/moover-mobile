@@ -336,7 +336,10 @@ class _MenuGroup extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     child: InkWell(
-                      onTap: () => _notYet(context, label),
+                      // S05 sudah ada; menu lain belum.
+                      onTap: label == 'Time Log'
+                          ? () => _openTimeLog(context)
+                          : () => _notYet(context, label),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: MooverSpace.lg,

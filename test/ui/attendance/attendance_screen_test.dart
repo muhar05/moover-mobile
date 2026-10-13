@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moover/ui/attendance/attendance_screen.dart';
 import 'package:moover/ui/core/themes/theme.dart';
 import 'package:moover/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/main_menu/mock_data.dart' show Punch;
 
 import '../core/design_system_test.dart' show contrast;
 
@@ -85,14 +86,14 @@ void main() {
   testWidgets(
     'simulasi foto → Ulangi → kirim: busy lalu kembali dengan waktu',
     (tester) async {
-      DateTime? result;
+      Punch? result;
       await tester.pumpWidget(
         MaterialApp(
           theme: mooverTheme(),
           home: Builder(
             builder: (context) => TextButton(
               onPressed: () async => result = await Navigator.of(context)
-                  .push<DateTime>(
+                  .push<Punch>(
                     MaterialPageRoute(builder: (_) => const AttendanceScreen()),
                   ),
               child: const Text('buka'),
@@ -143,5 +144,26 @@ void main() {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     expect(find.bySemanticsLabel('Clock-in'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('mode clock-out: judul, tombol, peringatan sebelum 16.30', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: mooverTheme(),
+        home: const AttendanceScreen(clockOut: true),
+      ),
+    );
+    final now = DateTime.now();
+    expect(find.text('Clock-out'), findsOneWidget);
+    await tapText(tester, 'Simulasi tanpa kamera');
+    expect(primary(tester).label, 'Kirim clock-out');
+    // KAK §6.8: clock-out sebelum 16.30 = Tidak Lengkap; diberi tahu dulu.
+    final early = now.hour * 60 + now.minute < 16 * 60 + 30;
+    expect(
+      find.textContaining('Tidak Lengkap'),
+      early ? findsOneWidget : findsNothing,
+    );
   });
 }

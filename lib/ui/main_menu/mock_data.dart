@@ -76,12 +76,43 @@ const tripHistory = <Trip>[
   ),
 ];
 
-// Waktu clock-in hari ini; null = belum. Available = sudah clock-in
-// (keputusan pemilik project 2026-10-10; Q-B1/K2 belum di DESIGN.md).
-// Diisi oleh simulasi clock-in (S04, keputusan 2026-10-11).
+/// Satu absensi: waktu + foto bukti. [photo] null = foto simulasi/contoh.
+typedef Punch = ({DateTime at, String? photo});
+
+/// Satu hari di Time Log (S05).
+typedef TimeLog = ({Punch clockIn, Punch clockOut});
+
+// Absensi hari ini; null = belum. Available = sudah clock-in dan belum
+// clock-out (keputusan pemilik project 2026-10-10; Q-B1/K2 belum di
+// DESIGN.md; mock web juga begitu). Diisi simulasi S04 (keputusan
+// 2026-10-11; clock-out 2026-10-13).
 // ponytail: hanya di memori, hilang saat app ditutup dan tidak reset per
 // hari; ganti dengan data server saat API absensi (U5) Terverifikasi.
-final clockInTime = ValueNotifier<DateTime?>(null);
+final clockIn = ValueNotifier<Punch?>(null);
+final clockOut = ValueNotifier<Punch?>(null);
+
+// Riwayat contoh, terbaru dulu (nilai V2.1 Time log). Tanpa foto.
+final pastTimeLogs = <TimeLog>[
+  (
+    clockIn: (at: DateTime(2026, 10, 9, 7, 30), photo: null),
+    clockOut: (at: DateTime(2026, 10, 9, 16, 30), photo: null),
+  ),
+  (
+    clockIn: (at: DateTime(2026, 10, 8, 7, 55), photo: null),
+    clockOut: (at: DateTime(2026, 10, 8, 14, 30), photo: null),
+  ),
+  (
+    clockIn: (at: DateTime(2026, 10, 7, 7, 45), photo: null),
+    clockOut: (at: DateTime(2026, 10, 7, 16, 45), photo: null),
+  ),
+];
+
+/// Hari ini (setelah clock-out) lalu riwayat contoh.
+List<TimeLog> timeLogs() => [
+  if ((clockIn.value, clockOut.value) case (final i?, final o?))
+    (clockIn: i, clockOut: o),
+  ...pastTimeLogs,
+];
 
 typedef Vehicle = ({String model, String plate, String capacity, String image});
 

@@ -88,8 +88,12 @@ class TripDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: MooverSpace.md),
-          if (tripPoints[trip.number] case final points?) ...[
-            RouteMap(points, height: 180),
+          if (routeOf(trip) case final points?) ...[
+            RouteMap(
+              points,
+              key: ValueKey(Object.hashAll(points)),
+              height: 180,
+            ),
             const SizedBox(height: MooverSpace.md),
           ],
           Card(
@@ -377,7 +381,14 @@ class _Passengers extends StatelessWidget {
   );
 }
 
-/// Peta rute asal → tujuan (Leaflet/OSM, KAK §9.2) untuk S07/S08. Peta
+/// Titik rute trip: jemput, lalu tujuan berurutan (S09); null = trip tanpa
+/// titik peta.
+List<LatLng>? routeOf(Trip t) => switch (tripPoints[t.number]) {
+  (final origin, _) => [origin, for (final s in stopsOf(t)) ?s.point],
+  null => null,
+};
+
+/// Peta rute jemput → tujuan (Leaflet/OSM, KAK §9.2) untuk S07/S08/S11. Peta
 /// dekoratif bagi pembaca layar: asal, tujuan, dan alamat sudah ada sebagai
 /// teks di layar. Tile gagal dimuat → catatan di atas peta, detail teks tetap
 /// tampil (DESIGN.md S07).
@@ -388,28 +399,32 @@ class _Passengers extends StatelessWidget {
 /// Tile OSM publik hanya untuk demo (kebijakan tile.openstreetmap.org); untuk
 /// produksi butuh tile server sendiri/penyedia: Belum ditentukan.
 class RouteMap extends StatefulWidget {
-  const RouteMap(this.points, {super.key, required this.height});
+  const RouteMap(this.points, {super.key, required this.height})
+    : assert(points.length > 1);
 
-  final (LatLng, LatLng) points;
+  /// Jemput, lalu tujuan berurutan. Berubah = beri key baru (rute dimuat di
+  /// initState).
+  final List<LatLng> points;
   final double height;
 
   @override
   State<RouteMap> createState() => _RouteMapState();
 }
 
-/// Geometri rute jalan asal → tujuan; null = tidak ada. Tes menggantinya.
+/// Geometri rute jalan melewati semua titik; null = tidak ada. Tes
+/// menggantinya.
 /// ponytail: server demo OSRM publik langsung dari HP (maks. 1
 /// permintaan/detik, tidak untuk produksi); ganti dengan rute lewat backend
 /// (Q-T6).
 @visibleForTesting
-Future<List<LatLng>?> Function(LatLng, LatLng) fetchRoute = _osrm;
+Future<List<LatLng>?> Function(List<LatLng>) fetchRoute = _osrm;
 
-Future<List<LatLng>?> _osrm(LatLng a, LatLng b) async => routeFromOsrm(
+Future<List<LatLng>?> _osrm(List<LatLng> points) async => routeFromOsrm(
   await getJson(
     Uri.https(
       'router.project-osrm.org',
       '/route/v1/driving/'
-          '${a.longitude},${a.latitude};${b.longitude},${b.latitude}',
+          '${points.map((p) => '${p.longitude},${p.latitude}').join(';')}',
       {'overview': 'full', 'geometries': 'geojson'},
     ),
   ),
@@ -449,8 +464,7 @@ class _RouteMapState extends State<RouteMap> {
   @override
   void initState() {
     super.initState();
-    final (origin, destination) = widget.points;
-    fetchRoute(origin, destination).timeout(const Duration(seconds: 8)).then(
+    fetchRoute(widget.points).timeout(const Duration(seconds: 8)).then(
       (road) {
         if (mounted && road != null && road.length > 1) {
           setState(() => _road = road);
@@ -462,8 +476,8 @@ class _RouteMapState extends State<RouteMap> {
 
   @override
   Widget build(BuildContext context) {
-    final (origin, destination) = widget.points;
-    final line = _road ?? [origin, destination];
+    final points = widget.points;
+    final line = _road ?? points;
     return ClipRRect(
       borderRadius: BorderRadius.circular(MooverRadius.card),
       child: SizedBox(
@@ -476,7 +490,7 @@ class _RouteMapState extends State<RouteMap> {
                 key: ValueKey(_road != null),
                 options: MapOptions(
                   initialCameraFit: CameraFit.coordinates(
-                    coordinates: [...line, origin, destination],
+                    coordinates: [...line, ...points],
                     padding: const EdgeInsets.all(MooverSpace.xxl),
                     // Jemput = tujuan: luas nol, zoom tak hingga.
                     maxZoom: 18,
@@ -502,7 +516,7 @@ class _RouteMapState extends State<RouteMap> {
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: origin,
+                        point: points.first,
                         width: 18,
                         height: 18,
                         child: const DecoratedBox(
@@ -517,17 +531,21 @@ class _RouteMapState extends State<RouteMap> {
                           ),
                         ),
                       ),
-                      Marker(
-                        point: destination,
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.topCenter, // ujung pin di titik
-                        child: const Icon(
-                          LucideIcons.mapPin,
-                          size: 36,
-                          color: MooverColors.navy,
+                      // Tujuan antara (S09) lebih kecil dari tujuan akhir.
+                      for (final (i, p) in points.indexed.skip(1))
+                        Marker(
+                          point: p,
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.topCenter, // ujung pin di titik
+                          child: Icon(
+                            LucideIcons.mapPin,
+                            size: i == points.length - 1 ? 36 : 28,
+                            color: i == points.length - 1
+                                ? MooverColors.navy
+                                : MooverColors.primary,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   _osmAttribution(context),

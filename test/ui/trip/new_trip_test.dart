@@ -153,7 +153,7 @@ void main() {
     // Tujuan: peta digeser ke kiri-atas → titik ke timur-selatan.
     // Rute jalan palsu: lewat satu belokan.
     const bend = LatLng(-6.19, 106.84);
-    fetchRoute = (a, b) async => [a, bend, b];
+    fetchRoute = (p) async => [p.first, bend, p.last];
     expect(find.byType(PolylineLayer), findsNothing); // baru satu titik
     await pickPoint(tester, 'Tujuan', const Offset(-150, -150));
     expect(find.text('Gedung → B'), findsOneWidget);
@@ -167,6 +167,10 @@ void main() {
         .points;
     expect(preview, hasLength(3));
     expect(preview[1], bend);
+    // Alamat lengkap diketik manual, opsional (2026-10-14).
+    await fill(tester, {
+      'Alamat lengkap tujuan (opsional)': '  Jl. Uji No. 7, Lt. 3  ',
+    });
     await tapInForm(tester, 'Simpan trip');
     expect(find.byType(NewTripScreen), findsNothing);
     final number = firstNumberToday();
@@ -213,6 +217,7 @@ void main() {
     expect(find.text(number), findsOneWidget);
     expect(find.text('Gedung A'), findsOneWidget);
     expect(find.text('Penumpang Uji (Divisi Uji)'), findsOneWidget);
+    expect(find.text('Jl. Uji No. 7, Lt. 3'), findsOneWidget);
     await tap(tester, find.text('Mulai trip'));
     await tap(tester, find.widgetWithText(FilledButton, 'Mulai'));
     expect(find.byType(ActiveTripScreen), findsOneWidget);
@@ -336,6 +341,7 @@ void main() {
         destination: 'Gedung B',
         originPoint: const LatLng(-6.2, 106.8),
         destinationPoint: const LatLng(-6.3, 106.9),
+        destinationAddress: 'Jl. Uji No. 5',
       ));
       final startedAt = DateTime(2030, 1, 2, 9, 5);
       activeTrip.value = (trip: trip, startedAt: startedAt);
@@ -364,6 +370,8 @@ void main() {
       const LatLng(-6.2, 106.8),
       const LatLng(-6.3, 106.9),
     ));
+    // Alamat manual ikut pulih (2026-10-14).
+    expect(extraTrips.value.single.address, 'Jl. Uji No. 5');
     expect(statusOf(trip), onTrip);
     expect(activeTrip.value?.trip.number, trip.number);
     expect(activeTrip.value?.startedAt, DateTime(2030, 1, 2, 9, 5));
@@ -417,6 +425,7 @@ void main() {
         destination: 'x',
         originPoint: kantorPusat,
         destinationPoint: kantorCabang,
+        destinationAddress: null,
       )),
       throwsA(isA<DatabaseException>()),
     );
@@ -464,6 +473,7 @@ void main() {
         destination: 'Gedung B',
         originPoint: kantorPusat,
         destinationPoint: kantorCabang,
+        destinationAddress: null,
       ));
       expect(tripPoints[trip.number], (kantorPusat, kantorCabang));
       await tripStore.reset();

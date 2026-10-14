@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:moover/ui/core/themes/theme.dart';
 import 'package:moover/ui/core/widgets/widgets.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
 import 'package:moover/ui/main_menu/mock_data.dart';
 import 'package:moover/ui/trip/trip_detail_screen.dart';
+import 'package:moover/ui/trip/trip_store.dart';
 
 import '../core/design_system_test.dart' show contrast;
 
@@ -277,6 +281,187 @@ void main() {
     await tester.pumpWidget(app(home: TripDetailScreen(trip: noPoints)));
     expect(find.byType(FlutterMap), findsNothing);
     handle.dispose();
+  });
+
+  testWidgets('S09 tambah tujuan: tiba berurutan, peta lewat semua titik, '
+      'End menutup tujuan terakhir', (tester) async {
+    tester.view
+      ..physicalSize = const Size(960, 1704)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final geocode = reverseGeocode;
+    reverseGeocode = (_) async => 'Halte Uji';
+    addTearDown(() => reverseGeocode = geocode);
+    final (origin, destination) = tripPoints[first.number]!;
+    // Langsung di S08 (alur Start diuji di atas), teks 200% di 320dp.
+    activeTrip.value = (trip: first, startedAt: DateTime(2030, 1, 1, 9, 5));
+    setTripStatus(first, onTrip);
+    await tester.pumpWidget(
+      app(home: ActiveTripScreen(active: activeTrip.value!), textScale: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Daftar tujuan'), findsNothing); // satu tujuan
+    expect(find.text('Tiba di tujuan ini'), findsNothing);
+
+    // Mulai dari tujuan terakhir; geser → titik baru, nama dari peta.
+    await tap(tester, find.text('Tujuan'));
+    expect(find.text('Tambah tujuan'), findsOneWidget);
+    expect(
+      MapCamera.of(tester.element(find.text('© OpenStreetMap'))).center,
+      destination,
+    );
+    await tester.drag(find.byType(FlutterMap), const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    await tap(tester, find.text('Pilih titik ini'));
+    // Alamat lengkap manual, opsional (2026-10-14).
+    expect(tester.takeException(), isNull, reason: 'dialog alamat');
+    await tester.enterText(find.byType(TextField), ' Jl. Halte No. 2 ');
+    await tap(tester, find.text('Tambahkan'));
+    expect(find.byType(ActiveTripScreen), findsOneWidget);
+    expect(stopsOf(first).last.address, 'Jl. Halte No. 2');
+    final added = stopsOf(first).last.point!;
+    expect(added.longitude, greaterThan(destination.longitude));
+    expect(stopsOf(first).map((s) => s.name), [
+      tripDestination(first),
+      'Halte Uji',
+    ]);
+    // Teks 200% di 320dp: kartu tujuan muat.
+    expect(tester.takeException(), isNull);
+    // S08 berupa ListView lazy: gulir ke kartu tujuan.
+    await tester.scrollUntilVisible(
+      find.text('Tiba di tujuan ini'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tujuan saat ini · 1 dari 2'), findsOneWidget);
+    expect(find.text('Daftar tujuan'), findsOneWidget);
+    expect(
+      tester
+          .widget<PolylineLayer>(find.byType(PolylineLayer))
+          .polylines
+          .single
+          .points,
+      [origin, destination, added],
+    );
+    // Tambah lagi: peta mulai dari tujuan terakhir yang baru; Back = batal.
+    await tap(tester, find.text('Tujuan'));
+    expect(
+      MapCamera.of(tester.element(find.text('© OpenStreetMap'))).center,
+      added,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(stopsOf(first), hasLength(2));
+    await tester.scrollUntilVisible(
+      find.text('Tiba di tujuan ini'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tap(tester, find.text('Tiba di tujuan ini'));
+    expect(find.text('Tujuan saat ini · 2 dari 2'), findsOneWidget);
+    expect(find.text('Halte Uji'), findsWidgets);
+    // Alamat manual tujuan saat ini: di kartu + daftar.
+    expect(find.text('Jl. Halte No. 2'), findsNWidgets(2));
+    expect(find.text('Tiba di tujuan ini'), findsNothing); // terakhir: End
+    expect(stopsOf(first).first.arrivedAt, isNotNull);
+    expect(stopsOf(first).last.arrivedAt, isNull);
+    final arrived = find.textContaining(RegExp(r'^Tiba \d\d\.\d\d$'));
+    expect(arrived, findsOneWidget);
+
+    await tap(tester, find.text('Akhiri trip'));
+    await tap(tester, find.byType(CheckboxListTile));
+    await tap(tester, find.widgetWithText(FilledButton, 'Akhiri'));
+    expect(stopsOf(first).every((s) => s.arrivedAt != null), isTrue);
+
+    // S13 ikut menampilkan daftar tujuan (Navigator baru, tanpa S10).
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(app(home: TripSummaryScreen(trip: first)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Daftar tujuan'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.scrollUntilVisible(
+      find.text('2. Halte Uji'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Daftar tujuan'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Tiba \d\d\.\d\d$')), findsNWidgets(2));
+    expect(find.text('Jl. Halte No. 2'), findsOneWidget);
+  });
+
+  testWidgets('S08: ilustrasi 2D; driver tidak bisa menghapus tujuan', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final geocode = reverseGeocode;
+    reverseGeocode = (_) async => 'Halte Uji';
+    addTearDown(() => reverseGeocode = geocode);
+    activeTrip.value = (trip: first, startedAt: DateTime(2030, 1, 1, 9, 5));
+    setTripStatus(first, onTrip);
+    await tester.pumpWidget(
+      app(home: ActiveTripScreen(active: activeTrip.value!)),
+    );
+    await tester.pumpAndSettle();
+    // Ilustrasi dekoratif, diam saat reduced motion (pumpAndSettle selesai).
+    expect(find.byType(MooverRoadIllustration), findsOneWidget);
+
+    // Tambah tanpa alamat; Batal di dialog alamat = tidak ditambahkan.
+    await tap(tester, find.text('Tujuan'));
+    await tap(tester, find.text('Pilih titik ini'));
+    await tap(tester, find.text('Batal'));
+    expect(stopsOf(first), hasLength(1));
+    await tap(tester, find.text('Tujuan'));
+    await tap(tester, find.text('Pilih titik ini'));
+    await tap(tester, find.text('Tambahkan'));
+    expect(stopsOf(first).map((s) => (s.name, s.address)), [
+      (tripDestination(first), first.address),
+      ('Halte Uji', null),
+    ]);
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    // Hapus/ubah tujuan = keputusan pemesan + approval (keputusan pemilik
+    // project 2026-10-14): tanpa tombol hapus.
+    expect(find.text('Daftar tujuan'), findsOneWidget);
+    expect(find.byTooltip(RegExp('^Hapus tujuan')), findsNothing);
+    expect(find.byType(IconButton), findsOneWidget); // Kembali saja
+    handle.dispose();
+  });
+
+  test('S09 daftar tujuan tersimpan di SQLite dan pulih', () async {
+    final dir = Directory.systemTemp.createTempSync('moover_trip');
+    final path = tripDbPath;
+    tripDbPath = '${dir.path}/trip.db';
+    addTearDown(() async {
+      await tripStore.reset();
+      tripDbPath = path;
+      dir.deleteSync(recursive: true);
+    });
+    final stops = <TripStop>[
+      (
+        name: 'Tujuan Uji',
+        address: null,
+        point: null,
+        arrivedAt: DateTime(2030, 1, 1, 9),
+      ),
+      (
+        name: 'Halte Uji',
+        address: 'Jl. Halte No. 2',
+        point: const LatLng(-6.2, 106.8),
+        arrivedAt: null,
+      ),
+    ];
+    await tripStore.saveStops(first.number, stops);
+    // "Tutup app": memori kosong, lalu muat ulang dari file.
+    await tripStore.reset();
+    expect(stopsOf(first), hasLength(1));
+    await tripStore.load();
+    expect(stopsOf(first), stops);
   });
 
   test('kontras banner dan tombol batal', () {

@@ -309,6 +309,11 @@ class TripSummaryScreen extends StatelessWidget {
               ),
             ),
           ),
+          // Tujuan tambahan saat trip berjalan (S09) + jam tiba.
+          if (stopsOf(trip) case final stops when stops.length > 1) ...[
+            const SizedBox(height: MooverSpace.md),
+            _Stops(stops),
+          ],
           if (trip.passengers case final passengers?) ...[
             const SizedBox(height: MooverSpace.md),
             _Passengers(passengers),

@@ -28,6 +28,8 @@ typedef NewTrip = ({
   String destination,
   LatLng originPoint,
   LatLng destinationPoint,
+  // Alamat lengkap tujuan, diketik manual, opsional (2026-10-14).
+  String? destinationAddress,
 });
 
 /// Path DB; tes menggantinya dengan [inMemoryDatabasePath]. File terpisah
@@ -52,12 +54,17 @@ class TripStore {
 
   Future<Database> _openNew() async => _opened = await openDatabase(
     tripDbPath,
-    version: 2,
+    version: 4,
     // Sudah satu instance lewat [_db]; tanpa ini sqflite memakai ulang DB
     // lain dengan path sama (tes: ':memory:' reimburse).
     singleInstance: false,
     onCreate: (db, _) async {
-      for (final sql in [...tripSchema, ..._addPoints]) {
+      for (final sql in [
+        ...tripSchema,
+        ..._addPoints,
+        _addStops,
+        ..._addAddress,
+      ]) {
         await db.execute(sql);
       }
     },
@@ -65,6 +72,12 @@ class TripStore {
     onUpgrade: (db, from, _) async {
       if (from < 2) {
         for (final sql in _addPoints) {
+          await db.execute(sql);
+        }
+      }
+      if (from < 3) await db.execute(_addStops);
+      if (from < 4) {
+        for (final sql in _addAddress) {
           await db.execute(sql);
         }
       }
@@ -107,6 +120,25 @@ class TripStore {
           activeTrip.value ??= (trip: trip, startedAt: DateTime.parse(at));
         }
       }
+      final stops = <String, List<TripStop>>{};
+      for (final r in await db.query('trip_stop', orderBy: 'seq')) {
+        (stops[r['trip_number']! as String] ??= []).add((
+          name: r['name']! as String,
+          address: r['address'] as String?,
+          point: switch ((r['lat'], r['lng'])) {
+            (final num lat, final num lng) => LatLng(
+              lat.toDouble(),
+              lng.toDouble(),
+            ),
+            _ => null,
+          },
+          arrivedAt: switch (r['arrived_at']) {
+            final String at => DateTime.parse(at),
+            _ => null,
+          },
+        ));
+      }
+      tripStops.value = {...stops, ...tripStops.value};
       // Terakhir: pendengar [tripStatus] membaca [tripResults].
       tripStatus.value = {...statuses, ...tripStatus.value};
     } on Exception catch (e) {
@@ -147,6 +179,7 @@ class TripStore {
         'origin_lng': n.originPoint.longitude,
         'destination_lat': n.destinationPoint.latitude,
         'destination_lng': n.destinationPoint.longitude,
+        'destination_address': n.destinationAddress,
       };
       await tx.insert('trip', row);
       return _tripFromRow(row);
@@ -182,6 +215,34 @@ class TripStore {
     }
   }
 
+  /// Dari [setTripStops]: seluruh daftar tujuan trip ditulis ulang.
+  Future<void> saveStops(String number, List<TripStop> stops) async {
+    try {
+      await load();
+      final db = await _open();
+      await db.transaction((tx) async {
+        await tx.delete(
+          'trip_stop',
+          where: 'trip_number = ?',
+          whereArgs: [number],
+        );
+        for (final (seq, s) in stops.indexed) {
+          await tx.insert('trip_stop', {
+            'trip_number': number,
+            'seq': seq,
+            'name': s.name,
+            'address': s.address,
+            'lat': s.point?.latitude,
+            'lng': s.point?.longitude,
+            'arrived_at': s.arrivedAt?.toIso8601String(),
+          });
+        }
+      });
+    } on Exception catch (e) {
+      debugPrint('Tujuan trip $number gagal disimpan: $e');
+    }
+  }
+
   /// Tidak menunggu [_db]: future dari zona waktu palsu tes sebelumnya bisa
   /// tidak pernah selesai.
   @visibleForTesting
@@ -194,6 +255,7 @@ class TripStore {
       tripPoints.remove(t.number);
     }
     extraTrips.value = const [];
+    tripStops.value = const {};
     await db?.close();
   }
 }
@@ -237,6 +299,26 @@ const _addPoints = [
   'ALTER TABLE trip ADD COLUMN destination_lng REAL',
 ];
 
+/// Migrasi v3: daftar tujuan (S09) semua trip. seq 0 = tujuan awal, seq > 0
+/// = ditambah saat trip berjalan; arrived_at null = belum tiba.
+const _addStops = '''
+CREATE TABLE trip_stop (
+  trip_number TEXT NOT NULL,
+  seq INTEGER NOT NULL CHECK (seq >= 0),
+  name TEXT NOT NULL CHECK (name <> ''),
+  lat REAL,
+  lng REAL,
+  arrived_at TEXT,
+  PRIMARY KEY (trip_number, seq)
+)''';
+
+/// Migrasi v4: alamat lengkap manual (opsional) tujuan trip Tipe A dan
+/// tiap tujuan S09.
+const _addAddress = [
+  'ALTER TABLE trip ADD COLUMN destination_address TEXT',
+  'ALTER TABLE trip_stop ADD COLUMN address TEXT',
+];
+
 /// Juga mendaftarkan titik peta ke [tripPoints].
 Trip _tripFromRow(Map<String, Object?> r) {
   final trip = _tripOf(r);
@@ -259,7 +341,7 @@ Trip _tripOf(Map<String, Object?> r) => (
   date: formatDate(DateTime.parse(r['trip_date']! as String)).split(', ').last,
   time: '${(r['pickup_time']! as String).replaceAll(':', '.')} WIB',
   route: '${r['origin']} → ${r['destination']}',
-  address: null,
+  address: r['destination_address'] as String?,
   passengers: '${r['passenger_name']} (${r['passenger_division']})',
   status: 'Terjadwal',
   tone: StatusTone.neutral,

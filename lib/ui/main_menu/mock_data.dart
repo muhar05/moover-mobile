@@ -116,6 +116,55 @@ void setTripStatus(Trip t, TripStatus status, [TripResult? result]) {
   );
 }
 
+/// Satu tujuan trip; [arrivedAt] null = belum tiba. Driver bisa menambah
+/// tujuan saat trip berjalan (S09, KAK §5.1.5) dan menyelesaikan tiap tujuan
+/// berurutan (KAK §6.1 langkah 4), seperti "add stops" Google Maps
+/// (keputusan pemilik project 2026-10-14, Q-B4). Tujuan terakhir tiba saat
+/// End Trip. Driver tidak menghapus/mengubah tujuan: keputusan pemesan dan
+/// alur approval-nya Belum ditentukan (keputusan pemilik project
+/// 2026-10-14, jangan diimplementasikan dulu). [address]: alamat lengkap diisi
+/// driver manual, opsional (permintaan 2026-10-14). Bentuk mengikuti
+/// `TripDestination` web (`arrivedAt`).
+typedef TripStop = ({
+  String name,
+  String? address,
+  LatLng? point,
+  DateTime? arrivedAt,
+});
+
+/// Daftar tujuan per nomor trip yang tujuannya pernah diubah; urutan 0 =
+/// tujuan awal. Disimpan juga di SQLite ([tripStore]).
+final tripStops = ValueNotifier<Map<String, List<TripStop>>>({});
+
+/// Tujuan berurutan; belum diubah = tujuan awal saja.
+List<TripStop> stopsOf(Trip t) =>
+    tripStops.value[t.number] ??
+    [
+      (
+        name: tripDestination(t),
+        address: t.address,
+        point: tripPoints[t.number]?.$2,
+        arrivedAt: null,
+      ),
+    ];
+
+void setTripStops(Trip t, List<TripStop> stops) {
+  tripStops.value = {...tripStops.value, t.number: stops};
+  tripStore.saveStops(t.number, stops);
+}
+
+/// Tandai tujuan ke-[i] tiba sekarang.
+void arriveAt(Trip t, int i) {
+  final stops = [...stopsOf(t)];
+  stops[i] = (
+    name: stops[i].name,
+    address: stops[i].address,
+    point: stops[i].point,
+    arrivedAt: DateTime.now(),
+  );
+  setTripStops(t, stops);
+}
+
 /// Hasil trip untuk S13: jam Start/End Trip ("HH.MM WIB"), rating 1–5 +
 /// komentar penumpang (KAK §5.2.1), alasan batal. null = tidak ada/belum.
 typedef TripResult = ({

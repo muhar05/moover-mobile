@@ -4,18 +4,39 @@ part of 'trip_detail_screen.dart';
 /// V2.1 "Active trip". Back kembali ke Beranda tanpa mengakhiri trip (UD1).
 /// Simulasi tanpa server (keputusan pemilik project 2026-10-13).
 /// ponytail: peta tanpa posisi driver; ETA, jarak, dan lalu lintas V2.1
-/// belum ada (sumber rute Q-T6, GPS hilang Q-T4/Q-T5). Tambah tujuan
-/// (S09) belum ada: alurnya Perlu konfirmasi (Q-B4).
+/// belum ada (sumber rute Q-T6, GPS hilang Q-T4/Q-T5).
+/// S09 Tambah tujuan seperti "add stops" Google Maps (keputusan pemilik
+/// project 2026-10-14, Q-B4): tujuan baru di akhir daftar, dipilih lewat
+/// [LocationPickerScreen] yang sama dengan S11 (bukan bottom sheet DESIGN.md
+/// S09, agar search bar ikut). Tujuan antara ditandai "Tiba" berurutan;
+/// tujuan terakhir tiba saat End Trip.
+/// Alamat lengkap diketik manual, opsional, setelah titik dipilih
+/// (2026-10-14). Hapus/ubah urutan tujuan oleh driver tidak dibuat: keputusan
+/// pemesan + approval (keputusan pemilik project 2026-10-14).
+/// ponytail: End Trip tidak menunggu tujuan antara
+/// (aturannya Perlu konfirmasi); tambah bila diminta.
 class ActiveTripScreen extends StatelessWidget {
   const ActiveTripScreen({super.key, required this.active});
 
   final ActiveTrip active;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: tripStops,
+    builder: (context, _) => _build(context),
+  );
+
+  Widget _build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final trip = active.trip;
     final muted = textTheme.bodySmall?.copyWith(color: MooverColors.textMuted);
+    final stops = stopsOf(trip);
+    final last = stops.length - 1;
+    final current = switch (stops.indexWhere((s) => s.arrivedAt == null)) {
+      -1 => last,
+      final i => i,
+    };
+    final points = routeOf(trip);
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.zero,
@@ -55,8 +76,12 @@ class ActiveTripScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (tripPoints[trip.number] case final points?)
-                  RouteMap(points, height: 240)
+                if (points != null)
+                  RouteMap(
+                    points,
+                    key: ValueKey(Object.hashAll(points)),
+                    height: 240,
+                  )
                 else
                   Text(
                     'Peta rute belum tersedia.',
@@ -77,6 +102,21 @@ class ActiveTripScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: MooverSpace.md,
               children: [
+                // Ilustrasi 2D trip berjalan (permintaan pemilik project
+                // 2026-10-14), dekoratif; diam saat reduced motion.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: MooverColors.navy,
+                    borderRadius: BorderRadius.circular(MooverRadius.card),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(MooverSpace.md),
+                    child: SizedBox(
+                      height: 96,
+                      child: MooverRoadIllustration(),
+                    ),
+                  ),
+                ),
                 spread(
                   StatusBadge(label: onTrip.$1, tone: onTrip.$2),
                   Text(
@@ -90,33 +130,52 @@ class ActiveTripScreen extends StatelessWidget {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(MooverSpace.lg),
-                    child: MergeSemantics(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 2,
-                        children: [
-                          // V2.1 "CURRENT DESTINATION": tag live 6,9:1.
-                          Text(
-                            'Tujuan saat ini',
-                            style: textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: StatusTone.live.foreground,
-                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: MooverSpace.md,
+                      children: [
+                        MergeSemantics(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 2,
+                            children: [
+                              // V2.1 "CURRENT DESTINATION": tag live 6,9:1.
+                              Text(
+                                stops.length > 1
+                                    ? 'Tujuan saat ini · ${current + 1} dari '
+                                          '${stops.length}'
+                                    : 'Tujuan saat ini',
+                                style: textTheme.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: StatusTone.live.foreground,
+                                ),
+                              ),
+                              Text(
+                                stops[current].name,
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (stops[current].address case final address?)
+                                Text(address, style: muted),
+                            ],
                           ),
-                          Text(
-                            tripDestination(trip),
-                            style: textTheme.titleSmall?.copyWith(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
+                        ),
+                        if (current < last)
+                          OutlinedButton.icon(
+                            onPressed: () => arriveAt(trip, current),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: MooverColors.primary,
                             ),
+                            icon: const Icon(LucideIcons.mapPinCheck),
+                            label: const Text('Tiba di tujuan ini'),
                           ),
-                          if (trip.address case final address?)
-                            Text(address, style: muted),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
+                if (stops.length > 1) _Stops(stops),
                 if (trip.passengers case final passengers?)
                   _Passengers(passengers),
               ],
@@ -128,13 +187,7 @@ class ActiveTripScreen extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text('Tambah tujuan belum tersedia.'),
-                  ),
-                ),
+              onPressed: () => _addStop(context, stops),
               style: OutlinedButton.styleFrom(
                 foregroundColor: MooverColors.primary,
               ),
@@ -155,6 +208,70 @@ class ActiveTripScreen extends StatelessWidget {
     );
   }
 
+  /// S09: pilih titik (mulai dari tujuan terakhir), tambahkan di akhir.
+  Future<void> _addStop(BuildContext context, List<TripStop> stops) async {
+    final picked = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          title: 'Tambah tujuan',
+          initial: stops.last.point ?? tripPoints[active.trip.number]?.$1,
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    // Alamat lengkap opsional, diketik manual (2026-10-14). Batal = tujuan
+    // tidak ditambahkan.
+    var address = '';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tambah tujuan'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: MooverSpace.md,
+            children: [
+              Text(picked.name),
+              TextField(
+                autofocus: true,
+                maxLength:
+                    200, // disetujui pemilik project 2026-10-14 (sementara).
+                maxLines: null,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (v) => address = v,
+                decoration: const InputDecoration(
+                  labelText: 'Alamat lengkap (opsional)',
+                  hintText: 'Nama jalan, nomor, gedung',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Tambahkan'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setTripStops(active.trip, [
+      ...stopsOf(active.trip),
+      (
+        name: picked.name,
+        address: address.trim().isEmpty ? null : address.trim(),
+        point: picked.point,
+        arrivedAt: null,
+      ),
+    ]);
+  }
+
   /// D8: sheet konfirmasi End Trip (V2.1), lalu S10 (KAK §6.1).
   Future<void> _end(BuildContext context) async {
     final ok = await showModalBottomSheet<bool>(
@@ -168,6 +285,7 @@ class ActiveTripScreen extends StatelessWidget {
       builder: (_) => _EndSheet(active),
     );
     if (ok != true || !context.mounted) return;
+    arriveAt(active.trip, stopsOf(active.trip).length - 1);
     setTripStatus(active.trip, waitingFeedback, (
       start: '${formatHm(active.startedAt)} WIB',
       arrival: '${formatHm(DateTime.now())} WIB',
@@ -179,6 +297,73 @@ class ActiveTripScreen extends StatelessWidget {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => QrFeedbackScreen(trip: active.trip),
+      ),
+    );
+  }
+}
+
+/// Daftar tujuan berurutan (KAK §5.1.5) dengan alamat dan jam tiba.
+class _Stops extends StatelessWidget {
+  const _Stops(this.stops);
+
+  final List<TripStop> stops;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final muted = textTheme.bodySmall?.copyWith(color: MooverColors.textMuted);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(MooverSpace.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: MooverSpace.md,
+          children: [
+            Semantics(
+              header: true,
+              child: Text('Daftar tujuan', style: textTheme.titleSmall),
+            ),
+            for (final (i, s) in stops.indexed)
+              MergeSemantics(
+                child: Row(
+                  spacing: MooverSpace.md,
+                  children: [
+                    // Ikon dekoratif: status dibaca dari teks.
+                    Icon(
+                      s.arrivedAt == null
+                          ? LucideIcons.mapPin
+                          : LucideIcons.circleCheck,
+                      size: 20,
+                      color: s.arrivedAt == null
+                          ? MooverColors.textMuted
+                          : StatusTone.ok.foreground,
+                    ),
+                    // Jam tiba di bawah nama: muat di teks 200%.
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${i + 1}. ${s.name}',
+                            style: textTheme.bodyMedium,
+                          ),
+                          if (s.address case final address?)
+                            Text(address, style: muted),
+                          if (s.arrivedAt case final at?)
+                            Text(
+                              'Tiba ${formatHm(at)}',
+                              style: muted?.copyWith(
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

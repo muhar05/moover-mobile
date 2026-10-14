@@ -5,6 +5,7 @@ export 'extra_trip_card.dart';
 export 'logo.dart';
 export 'primary_button.dart';
 export 'reimburse_item.dart';
+export 'road_illustration.dart';
 export 'route_timeline.dart';
 export 'section_header.dart';
 export 'shift_times.dart';

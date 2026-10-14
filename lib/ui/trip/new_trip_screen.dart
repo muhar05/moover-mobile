@@ -32,13 +32,14 @@ class _NewTripScreenState extends State<NewTripScreen> {
   final _division = TextEditingController();
   final _origin = TextEditingController();
   final _destination = TextEditingController();
+  final _address = TextEditingController();
   final _points = <TextEditingController, LatLng>{};
   bool _busy = false;
   String? _saveError;
 
   @override
   void dispose() {
-    for (final c in [_name, _division, _origin, _destination]) {
+    for (final c in [_name, _division, _origin, _destination, _address]) {
       c.dispose();
     }
     super.dispose();
@@ -56,6 +57,9 @@ class _NewTripScreenState extends State<NewTripScreen> {
         destination: _destination.text,
         originPoint: _points[_origin]!,
         destinationPoint: _points[_destination]!,
+        destinationAddress: _address.text.trim().isEmpty
+            ? null
+            : _address.text.trim(),
       ));
       if (mounted) Navigator.of(context).pop(trip);
     } on Exception {
@@ -151,6 +155,22 @@ class _NewTripScreenState extends State<NewTripScreen> {
             location(_origin, 'Lokasi jemput', 'Pilih lokasi jemput'),
             const SizedBox(height: MooverSpace.lg),
             location(_destination, 'Tujuan', 'Pilih tujuan'),
+            const SizedBox(height: MooverSpace.lg),
+            // Alamat lengkap diketik manual, opsional (permintaan pemilik
+            // project 2026-10-14): nama dari peta sering kurang rinci.
+            TextFormField(
+              controller: _address,
+              enabled: !_busy,
+              maxLength:
+                  200, // disetujui pemilik project 2026-10-14 (sementara).
+              maxLines: null,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Alamat lengkap tujuan (opsional)',
+                hintText: 'Nama jalan, nomor, gedung',
+                counterText: '',
+              ),
+            ),
             // Preview rute setelah kedua titik dipilih (permintaan pemilik
             // project 2026-10-14); dibuat ulang bila titik diubah.
             if ((_points[_origin], _points[_destination]) case (
@@ -159,7 +179,7 @@ class _NewTripScreenState extends State<NewTripScreen> {
             )) ...[
               const SizedBox(height: MooverSpace.lg),
               RouteMap(
-                (origin, destination),
+                [origin, destination],
                 key: ValueKey((origin, destination)),
                 height: 180,
               ),

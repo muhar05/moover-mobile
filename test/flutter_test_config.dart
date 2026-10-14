@@ -26,6 +26,6 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   tripDbPath = inMemoryDatabasePath;
   setUp(reimburseStore.reset);
   setUp(tripStore.reset);
-  setUp(() => fetchRoute = (_, _) async => null);
+  setUp(() => fetchRoute = (_) async => null);
   await testMain();
 }

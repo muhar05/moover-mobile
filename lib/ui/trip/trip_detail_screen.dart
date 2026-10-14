@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -11,6 +14,7 @@ import '../main_menu/mock_data.dart';
 import '../time_log/time_log_screen.dart' show formatHm;
 
 part 'active_trip_screen.dart';
+part 'location_picker_screen.dart';
 part 'trip_history_screen.dart';
 
 /// Buka trip: S08 bila trip ini sedang berjalan, S07 bila Terjadwal, selain
@@ -85,7 +89,7 @@ class TripDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: MooverSpace.md),
           if (tripPoints[trip.number] case final points?) ...[
-            _RouteMap(points, height: 180),
+            RouteMap(points, height: 180),
             const SizedBox(height: MooverSpace.md),
           ],
           Card(
@@ -377,27 +381,89 @@ class _Passengers extends StatelessWidget {
 /// dekoratif bagi pembaca layar: asal, tujuan, dan alamat sudah ada sebagai
 /// teks di layar. Tile gagal dimuat → catatan di atas peta, detail teks tetap
 /// tampil (DESIGN.md S07).
-/// ponytail: garis lurus asal → tujuan dan peta statis (tanpa geser/zoom,
-/// tanpa posisi GPS); ganti dengan geometri rute dari server (OSRM lewat
-/// backend, Q-T6) dan lokasi driver saat izin GPS diputuskan (Q-T4/Q-T5).
+/// Garis mengikuti jalan dari [fetchRoute] (permintaan pemilik project
+/// 2026-10-14); gagal/offline → garis lurus.
+/// ponytail: peta statis (tanpa geser/zoom, tanpa posisi GPS); lokasi driver
+/// saat izin GPS diputuskan (Q-T4/Q-T5).
 /// Tile OSM publik hanya untuk demo (kebijakan tile.openstreetmap.org); untuk
 /// produksi butuh tile server sendiri/penyedia: Belum ditentukan.
-class _RouteMap extends StatefulWidget {
-  const _RouteMap(this.points, {required this.height});
+class RouteMap extends StatefulWidget {
+  const RouteMap(this.points, {super.key, required this.height});
 
   final (LatLng, LatLng) points;
   final double height;
 
   @override
-  State<_RouteMap> createState() => _RouteMapState();
+  State<RouteMap> createState() => _RouteMapState();
 }
 
-class _RouteMapState extends State<_RouteMap> {
+/// Geometri rute jalan asal → tujuan; null = tidak ada. Tes menggantinya.
+/// ponytail: server demo OSRM publik langsung dari HP (maks. 1
+/// permintaan/detik, tidak untuk produksi); ganti dengan rute lewat backend
+/// (Q-T6).
+@visibleForTesting
+Future<List<LatLng>?> Function(LatLng, LatLng) fetchRoute = _osrm;
+
+Future<List<LatLng>?> _osrm(LatLng a, LatLng b) async => routeFromOsrm(
+  await getJson(
+    Uri.https(
+      'router.project-osrm.org',
+      '/route/v1/driving/'
+          '${a.longitude},${a.latitude};${b.longitude},${b.latitude}',
+      {'overview': 'full', 'geometries': 'geojson'},
+    ),
+  ),
+);
+
+/// Rute pertama dari respons OSRM (GeoJSON: [lng, lat]); lainnya null.
+@visibleForTesting
+List<LatLng>? routeFromOsrm(Object? json) => switch (json) {
+  {
+    'routes': [{'geometry': {'coordinates': final List<Object?> coords}}, ...],
+  } =>
+    [
+      for (final c in coords)
+        if (c case [final num lng, final num lat, ...])
+          LatLng(lat.toDouble(), lng.toDouble()),
+    ],
+  _ => null,
+};
+
+/// GET JSON (Nominatim, OSRM); bukan 200 → null.
+Future<Object?> getJson(Uri uri) async {
+  final client = HttpClient()
+    ..userAgent = 'Moover/1.0 (com.siagaabdiutama.moover)';
+  try {
+    final response = await (await client.getUrl(uri)).close();
+    if (response.statusCode != 200) return null;
+    return jsonDecode(await response.transform(utf8.decoder).join());
+  } finally {
+    client.close();
+  }
+}
+
+class _RouteMapState extends State<RouteMap> {
   bool _failed = false;
+  List<LatLng>? _road;
+
+  @override
+  void initState() {
+    super.initState();
+    final (origin, destination) = widget.points;
+    fetchRoute(origin, destination).timeout(const Duration(seconds: 8)).then(
+      (road) {
+        if (mounted && road != null && road.length > 1) {
+          setState(() => _road = road);
+        }
+      },
+      onError: (_) {}, // offline / timeout: garis lurus
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final (origin, destination) = widget.points;
+    final line = _road ?? [origin, destination];
     return ClipRRect(
       borderRadius: BorderRadius.circular(MooverRadius.card),
       child: SizedBox(
@@ -406,10 +472,14 @@ class _RouteMapState extends State<_RouteMap> {
           children: [
             ExcludeSemantics(
               child: FlutterMap(
+                // Dibuat ulang saat rute jalan tiba agar kamera memuat rute.
+                key: ValueKey(_road != null),
                 options: MapOptions(
                   initialCameraFit: CameraFit.coordinates(
-                    coordinates: [origin, destination],
+                    coordinates: [...line, origin, destination],
                     padding: const EdgeInsets.all(MooverSpace.xxl),
+                    // Jemput = tujuan: luas nol, zoom tak hingga.
+                    maxZoom: 18,
                   ),
                   backgroundColor: MooverColors.blueTint,
                   interactionOptions: const InteractionOptions(
@@ -417,18 +487,13 @@ class _RouteMapState extends State<_RouteMap> {
                   ),
                 ),
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.siagaabdiutama.moover',
-                    errorTileCallback: (_, _, _) {
-                      if (!_failed && mounted) setState(() => _failed = true);
-                    },
-                  ),
+                  _osmTiles(() {
+                    if (!_failed && mounted) setState(() => _failed = true);
+                  }),
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: [origin, destination],
+                        points: line,
                         color: MooverColors.primary,
                         strokeWidth: 4,
                       ),
@@ -465,58 +530,69 @@ class _RouteMapState extends State<_RouteMap> {
                       ),
                     ],
                   ),
-                  // Atribusi wajib (lisensi ODbL OSM). Bukan
-                  // SimpleAttributionWidget: Row-nya overflow di teks 200%.
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: ColoredBox(
-                      color: MooverColors.surface,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: MooverSpace.xs,
-                          vertical: 2,
-                        ),
-                        child: Text(
-                          '© OpenStreetMap',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _osmAttribution(context),
                 ],
               ),
             ),
-            if (_failed)
-              Positioned(
-                top: MooverSpace.sm,
-                left: MooverSpace.sm,
-                right: MooverSpace.sm,
-                child: Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: MooverColors.surface,
-                      borderRadius: BorderRadius.circular(MooverRadius.sm),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: MooverSpace.md,
-                        vertical: MooverSpace.sm,
-                      ),
-                      child: Text(
-                        'Peta tidak dapat dimuat. Periksa koneksi internet.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (_failed) _mapError(context),
           ],
         ),
       ),
     );
   }
 }
+
+/// Tile OSM publik (lihat batasan di [RouteMap]).
+TileLayer _osmTiles(VoidCallback onError) => TileLayer(
+  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  userAgentPackageName: 'com.siagaabdiutama.moover',
+  errorTileCallback: (_, _, _) => onError(),
+);
+
+/// Atribusi wajib (lisensi ODbL OSM), lapisan teratas peta. Bukan
+/// SimpleAttributionWidget: Row-nya overflow di teks 200%.
+Widget _osmAttribution(BuildContext context) => Align(
+  alignment: Alignment.bottomRight,
+  child: ColoredBox(
+    color: MooverColors.surface,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: MooverSpace.xs,
+        vertical: 2,
+      ),
+      child: Text(
+        '© OpenStreetMap',
+        style: Theme.of(context).textTheme.labelSmall,
+      ),
+    ),
+  ),
+);
+
+/// Catatan di atas peta saat tile gagal dimuat (di dalam Stack).
+Widget _mapError(BuildContext context) => Positioned(
+  top: MooverSpace.sm,
+  left: MooverSpace.sm,
+  right: MooverSpace.sm,
+  child: Center(
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: MooverColors.surface,
+        borderRadius: BorderRadius.circular(MooverRadius.sm),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: MooverSpace.md,
+          vertical: MooverSpace.sm,
+        ),
+        child: Text(
+          'Peta tidak dapat dimuat. Periksa koneksi internet.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    ),
+  ),
+);
 
 /// Action bar bawah (UD2): tombol berdampingan V2.1, [note] di atasnya.
 class _ActionBar extends StatelessWidget {

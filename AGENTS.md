@@ -17,7 +17,8 @@ Moover adalah sistem pengelolaan layanan transportasi internal perusahaan:
 Fase saat ini **frontend dengan data MOCK/DEMO**:
 
 - Tidak ada backend. Login memakai kredensial demo hardcode di `lib/ui/login/login_screen.dart`.
-- Tidak ada sesi tersimpan, token, atau panggilan jaringan.
+- Tidak ada sesi tersimpan, token, atau panggilan ke backend. Jaringan hanya untuk tile OSM, Nominatim, dan OSRM publik (demo).
+- Trip Tipe A, status trip, dan reimburse disimpan di SQLite perangkat (`trip_store.dart`, `reimburse_store.dart`) dengan skema kontrak data usulan.
 - Data layar (trip, reimburse) adalah konstanta mock di `mock_data.dart` fitur, ditandai `MOCK/DEMO`.
 
 ---
@@ -75,11 +76,15 @@ Aturan:
 | Font | Plus Jakarta Sans, dibundel di `assets/fonts/` (OFL) |
 | Animasi | bawaan Flutter (tanpa dependency runtime; `lottie` dihapus 2026-10-10) |
 | Ikon | `lucide_icons_flutter` (MIT, gaya garis V2.1; disetujui 2026-10-11). Jangan pakai `Icons.*` Material |
+| Kamera | `camera` (selfie clock-in/out di dalam layar app, `enableAudio: false`; disetujui 2026-10-14) |
+| Foto struk | `image_picker` (form reimburse) |
+| Peta | `flutter_map` + `latlong2`, tile OpenStreetMap (Leaflet/OSM, KAK §9.2) |
+| Penyimpanan lokal | `sqflite` (`sqflite_common_ffi` untuk tes). Skema tabel sengaja mengikuti usulan kontrak data (`docs/TRIP_DATA.md`, `docs/REIMBURSE_DATA.md`) agar data yang diserahkan ke backend sudah terstruktur; bukan pengganti backend |
 | Lint | `flutter_lints` |
-| Test | `flutter_test` |
+| Test | `flutter_test`, `sqflite_common_ffi` |
 | App ID | `com.siagaabdiutama.moover` |
 
-**Belum ditentukan:** state management, routing package, HTTP client, struktur folder lanjutan.
+**Belum ditentukan:** state management, routing package, HTTP client, struktur folder lanjutan. Demo memanggil Nominatim/OSRM publik lewat `dart:io` `HttpClient` (`getJson` di `trip_detail_screen.dart`); produksi lewat backend.
 
 **Jangan** upgrade Flutter, menambah dependency, atau mengubah konfigurasi (`pubspec.yaml`, `analysis_options.yaml`, `.gitignore`, Gradle, Info.plist, app ID) tanpa melapor dan mendapat persetujuan.
 

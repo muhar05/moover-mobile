@@ -70,7 +70,7 @@ class _HomeTabState extends State<_HomeTab> {
             ],
           ),
           ListenableBuilder(
-            listenable: Listenable.merge([clockIn, clockOut]),
+            listenable: Listenable.merge([clockIn, clockOut, extraTrips]),
             builder: (context, _) {
               final inAt = clockIn.value?.at;
               // V2.1: setelah clock-out, kartu agenda diganti ringkasan.
@@ -83,7 +83,7 @@ class _HomeTabState extends State<_HomeTab> {
               return MooverAgendaCard(
                 date: formatDate(_now),
                 clock: formatClock(_now),
-                tripCount: tripsToday.length,
+                tripCount: todayTrips().length,
                 clockInStatus: inAt == null
                     ? 'Belum clock-in hari ini.'
                     : 'Clock-in ${formatHm(inAt)} WIB',
@@ -110,12 +110,12 @@ class _HomeTabState extends State<_HomeTab> {
       children: [
         // Kartu jadwal membuka S07/S08 (2026-10-13); status ikut simulasi.
         ListenableBuilder(
-          listenable: tripStatus,
+          listenable: Listenable.merge([tripStatus, extraTrips]),
           builder: (context, _) => _Section(
             title: 'Jadwal hari ini',
-            trailing: '${tripsToday.length} trip',
+            trailing: '${todayTrips().length} trip',
             children: [
-              for (final (i, t) in tripsToday.indexed)
+              for (final (i, t) in todayTrips().indexed)
                 _TripItem(t, next: i == 0, onTap: () => openTrip(context, t)),
             ],
           ),

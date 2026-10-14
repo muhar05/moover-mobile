@@ -12,7 +12,9 @@ import '../login/login_screen.dart';
 import '../reimburse/reimburse_detail_screen.dart';
 import '../reimburse/reimburse_store.dart';
 import '../time_log/time_log_screen.dart';
+import '../trip/new_trip_screen.dart';
 import '../trip/trip_detail_screen.dart';
+import '../trip/trip_store.dart';
 import 'mock_data.dart';
 
 part 'account_tab.dart';
@@ -57,6 +59,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   void initState() {
     super.initState();
     if (reimburseStore.items == null) reimburseStore.load();
+    tripStore.load(); // sekali; memulihkan trip tambahan dan status
   }
 
   @override

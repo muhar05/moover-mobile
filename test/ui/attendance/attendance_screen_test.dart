@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,13 +21,61 @@ Widget app({double textScale = 1}) => MaterialApp(
   home: const AttendanceScreen(),
 );
 
-/// Kanal image_picker (implementasi bawaan di tes). [result] dipanggil
-/// untuk tiap pickImage.
-void mockPicker(WidgetTester tester, Object? Function() result) =>
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/image_picker'),
-      (call) async => call.method == 'pickImage' ? result() : null,
-    );
+/// Kanal paket camera (implementasi bawaan di tes): satu kamera depan.
+/// [create] melempar = izin ditolak; [calls] mencatat nama metode.
+List<String> fakeCamera(
+  WidgetTester tester, {
+  Object? Function()? create,
+  String photo = '/tmp/selfie.jpg',
+}) {
+  final calls = <String>[];
+  final messenger = tester.binding.defaultBinaryMessenger;
+  messenger.setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/camera'),
+    (call) async {
+      calls.add(call.method);
+      switch (call.method) {
+        case 'availableCameras':
+          return [
+            {'name': 'back', 'lensFacing': 'back', 'sensorOrientation': 90},
+            {'name': 'front', 'lensFacing': 'front', 'sensorOrientation': 270},
+          ];
+        case 'create':
+          calls.add('create:${(call.arguments as Map)['cameraName']}');
+          return create?.call() ?? {'cameraId': 1};
+        case 'initialize':
+          // Kamera asli mengirim event "initialized" lewat kanal per kamera.
+          scheduleMicrotask(
+            () => messenger.handlePlatformMessage(
+              'flutter.io/cameraPlugin/camera1',
+              const StandardMethodCodec().encodeMethodCall(
+                const MethodCall('initialized', {
+                  'previewWidth': 640.0,
+                  'previewHeight': 480.0,
+                  'exposureMode': 'auto',
+                  'exposurePointSupported': false,
+                  'focusMode': 'auto',
+                  'focusPointSupported': false,
+                }),
+              ),
+              (_) {},
+            ),
+          );
+          return null;
+        case 'takePicture':
+          return photo;
+      }
+      return null;
+    },
+  );
+  addTearDown(
+    () => messenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/camera'),
+      null,
+    ),
+  );
+  return calls;
+}
 
 /// Lembar bawah bisa di luar layar tes (800×600): gulir dulu, lalu ketuk.
 Future<void> tapText(WidgetTester tester, String text) async {
@@ -52,25 +103,93 @@ void main() {
     expect(primary(tester).onPressed, isNull);
   });
 
-  testWidgets('kamera dibatalkan: tetap tanpa foto', (tester) async {
-    mockPicker(tester, () => null);
+  testWidgets('kamera depan tampil di bingkai; jepret → foto, kamera dilepas', (
+    tester,
+  ) async {
+    final calls = fakeCamera(tester);
     await tester.pumpWidget(app());
-    await tester.tap(find.byTooltip('Ambil foto'));
     await tester.pumpAndSettle();
+    // Di dalam layar app (bukan aplikasi kamera bawaan), kamera depan.
+    expect(find.byType(CameraPreview), findsOneWidget);
+    expect(calls, contains('create:front'));
     expect(find.textContaining('Foto diambil'), findsNothing);
     expect(primary(tester).onPressed, isNull);
+
+    // Preview memenuhi kotak kamera; oval panduan di tengah, di dalamnya.
+    final preview = tester.getRect(
+      find
+          .ancestor(
+            of: find.byType(CameraPreview),
+            matching: find.byType(FittedBox),
+          )
+          .first,
+    );
+    final box = tester.getRect(
+      find
+          .ancestor(
+            of: find.byType(CameraPreview),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    expect(preview, box);
+    final oval = tester.getRect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is DecoratedBox &&
+            w.decoration is ShapeDecoration &&
+            (w.decoration as ShapeDecoration).shape is OvalBorder,
+      ),
+    );
+    expect(oval.center.dx, closeTo(preview.center.dx, 0.5));
+    expect(preview.contains(oval.topLeft), isTrue);
+    expect(preview.contains(oval.bottomRight), isTrue);
+    expect(oval.width, lessThan(preview.width / 2));
+    // Teks di atas preview: lapisan gelap, terbaca walau gambar putih penuh.
+    final scrim = tester
+        .widget<ColoredBox>(
+          find
+              .ancestor(
+                of: find.text('Posisikan wajah di dalam bingkai'),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        )
+        .color;
+    final onWhite = Color.alphaBlend(scrim, MooverColors.surface);
+    for (final c in [MooverColors.sky, MooverColors.amber]) {
+      expect(contrast(c, onWhite), greaterThanOrEqualTo(4.5));
+    }
+
+    await tester.tap(find.byTooltip('Ambil foto'));
+    await tester.pumpAndSettle();
+    expect(calls, contains('takePicture'));
+    expect(find.textContaining('Foto diambil · '), findsOneWidget);
+    expect(find.bySemanticsLabel('Foto clock-in Anda'), findsOneWidget);
+    expect(find.byType(CameraPreview), findsNothing);
+    expect(calls.last, 'dispose');
+    expect(primary(tester).onPressed, isNotNull);
+
+    // Ulangi: kamera dibuka lagi.
+    await tapText(tester, 'Ulangi');
+    await tester.pumpAndSettle();
+    expect(find.byType(CameraPreview), findsOneWidget);
+    expect(calls.where((c) => c == 'initialize'), hasLength(2));
   });
 
   testWidgets('kamera gagal (izin ditolak): pesan error, bisa coba lagi', (
     tester,
   ) async {
-    mockPicker(
+    var deny = true;
+    final calls = fakeCamera(
       tester,
-      () => throw PlatformException(code: 'camera_access_denied'),
+      create: () => deny
+          ? throw PlatformException(code: 'CameraAccessDenied')
+          : {'cameraId': 1},
     );
     await tester.pumpWidget(app());
-    await tester.tap(find.byTooltip('Ambil foto'));
     await tester.pumpAndSettle();
+    expect(find.byType(CameraPreview), findsNothing);
     const msg =
         'Kamera tidak dapat dibuka. Izinkan akses kamera, lalu coba lagi.';
     expect(find.text(msg), findsOneWidget);
@@ -80,7 +199,13 @@ void main() {
       contrast(tester.widget<Text>(find.text(msg)).style!.color!, bg),
       greaterThanOrEqualTo(4.5),
     );
-    expect(find.byTooltip('Ambil foto'), findsOneWidget);
+    // Ketuk tombol jepret = buka kamera lagi (mis. setelah izin diberikan).
+    deny = false;
+    await tester.tap(find.byTooltip('Ambil foto'));
+    await tester.pumpAndSettle();
+    expect(find.text(msg), findsNothing);
+    expect(find.byType(CameraPreview), findsOneWidget);
+    expect(calls, isNot(contains('takePicture')));
   });
 
   testWidgets(

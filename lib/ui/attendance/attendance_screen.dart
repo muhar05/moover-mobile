@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
@@ -16,8 +16,9 @@ import '../time_log/time_log_screen.dart' show shiftEnd;
 
 /// S04 Absensi: clock-in dengan foto + lokasi + waktu (KAK §5.1.2, §6.1),
 /// gaya V2.1 "Clock in". Keputusan pemilik project 2026-10-11 (belum di
-/// DESIGN.md): clock-in disimulasikan di aplikasi, kamera via image_picker
-/// (diuji di HP Android, tidak wajib di emulator), lokasi MOCK.
+/// DESIGN.md): clock-in disimulasikan di aplikasi, lokasi MOCK. Kamera
+/// tampil di dalam bingkai wajah (paket camera, disetujui pemilik project
+/// 2026-10-14), bukan aplikasi kamera bawaan; diuji di HP Android.
 /// Tidak ada server (API U5 masih Usulan): "Kirim" hanya menutup layar dan
 /// mengembalikan waktu clock-in ke pemanggil, tanpa klaim berhasil (D10).
 /// ponytail: latar V2.1 #0B1220 diganti navy (token yang ada); garis oval
@@ -33,7 +34,8 @@ class AttendanceScreen extends StatefulWidget {
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> {
+class _AttendanceScreenState extends State<AttendanceScreen>
+    with WidgetsBindingObserver {
   DateTime _now = DateTime.now();
   late final Timer _timer;
 
@@ -45,37 +47,71 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   String? _error;
   bool _busy = false;
 
+  /// Preview kamera; null = belum siap, gagal, atau sudah ada foto.
+  CameraController? _camera;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _timer = Timer.periodic(
       const Duration(seconds: 1),
       (_) => setState(() => _now = DateTime.now()),
     );
+    _startCamera();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer.cancel();
+    _camera?.dispose();
     super.dispose();
   }
 
-  Future<void> _takePhoto() async {
+  // Kamera dilepas saat app ke latar belakang (dipakai app lain), lalu
+  // dibuka lagi saat kembali bila belum ada foto.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive) {
+      _stopCamera();
+    } else if (state == AppLifecycleState.resumed &&
+        _shotAt == null &&
+        _camera == null) {
+      _startCamera();
+    }
+  }
+
+  void _stopCamera() {
+    final camera = _camera;
+    if (camera == null) return;
+    setState(() => _camera = null);
+    camera.dispose();
+  }
+
+  Future<void> _startCamera() async {
     setState(() => _error = null);
+    CameraController? camera;
     try {
       // Kamera depan (selfie). Galeri tidak dipakai (Q-B6 Perlu konfirmasi).
-      final photo = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        maxWidth: 1080,
-        imageQuality: 70,
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) throw CameraException('no_camera', null);
+      camera = CameraController(
+        cameras.firstWhere(
+          (c) => c.lensDirection == CameraLensDirection.front,
+          orElse: () => cameras.first,
+        ),
+        ResolutionPreset.medium,
+        enableAudio: false, // tanpa izin mikrofon
       );
-      if (photo == null || !mounted) return; // dibatalkan
-      setState(() {
-        _photoPath = photo.path;
-        _shotAt = DateTime.now();
-      });
+      await camera.initialize();
+      if (!mounted) {
+        await camera.dispose();
+        return;
+      }
+      setState(() => _camera = camera);
     } on Exception {
+      await camera?.dispose();
       // ponytail: tombol ke Pengaturan perangkat (S04, Usulan aktif) butuh
       // dependency baru; tambahkan saat penanganan izin diputuskan.
       if (mounted) {
@@ -86,10 +122,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  void _retake() => setState(() {
-    _photoPath = null;
-    _shotAt = null;
-  });
+  Future<void> _takePhoto() async {
+    final camera = _camera;
+    if (camera == null) return _startCamera(); // "Coba lagi" setelah galat
+    if (camera.value.isTakingPicture) return;
+    try {
+      final photo = await camera.takePicture();
+      if (!mounted) return;
+      setState(() {
+        _photoPath = photo.path;
+        _shotAt = DateTime.now();
+      });
+      _stopCamera(); // hemat baterai; Ulangi membuka lagi
+    } on Exception {
+      if (mounted) {
+        setState(() => _error = 'Foto gagal diambil. Coba lagi.');
+      }
+    }
+  }
+
+  void _retake() {
+    setState(() {
+      _photoPath = null;
+      _shotAt = null;
+    });
+    _startCamera();
+  }
 
   Future<void> _submit() async {
     setState(() => _busy = true);
@@ -162,6 +220,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     ),
                   ),
                   Expanded(
+                    // Koreksi pemilik project 2026-10-14: preview memenuhi
+                    // kotak kamera, oval hanya panduan wajah di tengahnya.
                     child: Container(
                       constraints: const BoxConstraints(minHeight: 280),
                       margin: const EdgeInsets.fromLTRB(
@@ -170,104 +230,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         MooverSpace.screen,
                         0,
                       ),
-                      padding: const EdgeInsets.all(MooverSpace.lg),
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         color: const Color(0x14FFFFFF), // putih 8% (V2.1)
                         borderRadius: BorderRadius.circular(28), // V2.1
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: 14, // V2.1
+                      child: Stack(
                         children: [
-                          if (shot == null) ...[
-                            // Bingkai wajah dekoratif. V2.1 180×228,
-                            // diperkecil agar tombol Kirim muat tanpa gulir
-                            // di layar ±830dp (Pixel 4).
-                            Container(
-                              width: 140,
-                              height: 176,
-                              decoration: const ShapeDecoration(
-                                shape: OvalBorder(
-                                  side: BorderSide(
-                                    color: MooverColors.cyan,
-                                    width: 3,
+                          if (shot == null && _camera != null)
+                            Positioned.fill(child: _Preview(_camera!)),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(MooverSpace.lg),
+                                  child: Center(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: shot == null
+                                          ? _oval
+                                          : _Photo(
+                                              path: _photoPath,
+                                              kind: kind,
+                                            ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            // Sky di bidang kamera (#1A3869) 7,6:1.
-                            Text(
-                              'Posisikan wajah di dalam bingkai',
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: MooverColors.sky,
-                              ),
-                            ),
-                          ] else ...[
-                            _Photo(path: _photoPath, kind: kind),
-                            Text(
-                              'Foto diambil · ${formatClock(shot)}',
-                              textAlign: TextAlign.center,
-                              style: textTheme.titleSmall?.copyWith(
-                                color: MooverColors.surface,
-                                fontFeatures: tabularFigures,
-                              ),
-                            ),
-                          ],
-                          if (_error case final error?)
-                            // Amber di bidang kamera 8,1:1.
-                            Text(
-                              error,
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: MooverColors.amber,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          if (shot == null) ...[
-                            IconButton(
-                              tooltip: 'Ambil foto',
-                              onPressed: _busy ? null : _takePhoto,
-                              style: IconButton.styleFrom(
-                                fixedSize: const Size.square(72),
-                                padding: const EdgeInsets.all(5),
-                                side: const BorderSide(
-                                  color: MooverColors.surface,
-                                  width: 4,
-                                ),
-                              ),
-                              icon: const SizedBox.square(
-                                dimension: 54,
-                                child: DecoratedBox(
-                                  decoration: ShapeDecoration(
-                                    shape: CircleBorder(),
-                                    color: MooverColors.surface,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Emulator tanpa kamera: foto diganti tanda
-                            // simulasi. Tidak ada di build release.
-                            if (!kReleaseMode)
-                              TextButton(
-                                onPressed: () =>
-                                    setState(() => _shotAt = DateTime.now()),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: MooverColors.sky,
-                                  minimumSize: const Size(48, 48),
-                                ),
-                                child: const Text('Simulasi tanpa kamera'),
-                              ),
-                          ] else
-                            OutlinedButton.icon(
-                              onPressed: _busy ? null : _retake,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: MooverColors.surface,
-                                side: const BorderSide(color: MooverColors.sky),
-                              ),
-                              icon: const Icon(LucideIcons.rotateCcw),
-                              label: const Text('Ulangi'),
-                            ),
+                              _controls(context, shot, scrim: _camera != null),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -299,6 +292,162 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
   }
+
+  /// Bingkai wajah (panduan) di atas preview. V2.1 180×228, diperkecil agar
+  /// tombol Kirim muat tanpa gulir di layar ±830dp (Pixel 4).
+  static const _oval = SizedBox(
+    width: 140,
+    height: 176,
+    child: DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: OvalBorder(side: BorderSide(color: MooverColors.cyan, width: 3)),
+      ),
+    ),
+  );
+
+  /// Petunjuk, galat, dan tombol di bawah kotak kamera. [scrim]: preview
+  /// tampil di belakangnya, jadi diberi lapisan [_scrimColor] (pudar di
+  /// atas) agar teks terbaca di atas gambar apa pun, termasuk putih penuh
+  /// (kontras diuji). Tanpa preview: bidang kamera #1A3869, sky 7,6:1.
+  Widget _controls(
+    BuildContext context,
+    DateTime? shot, {
+    required bool scrim,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final color = scrim ? _scrimColor : const Color(0x00000000);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: MooverSpace.xl,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [color.withValues(alpha: 0), color],
+            ),
+          ),
+        ),
+        ColoredBox(
+          color: color,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              MooverSpace.lg,
+              0,
+              MooverSpace.lg,
+              MooverSpace.lg,
+            ),
+            child: Column(
+              spacing: 14, // V2.1
+              children: [
+                if (shot == null)
+                  Text(
+                    'Posisikan wajah di dalam bingkai',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: MooverColors.sky,
+                    ),
+                  )
+                else
+                  Text(
+                    'Foto diambil · ${formatClock(shot)}',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleSmall?.copyWith(
+                      color: MooverColors.surface,
+                      fontFeatures: tabularFigures,
+                    ),
+                  ),
+                if (_error case final error?)
+                  Text(
+                    error,
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: MooverColors.amber,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                if (shot == null) ...[
+                  IconButton(
+                    tooltip: 'Ambil foto',
+                    // Nonaktif selama kamera disiapkan; setelah galat,
+                    // ketuk = buka kamera lagi.
+                    onPressed: _camera == null && _error == null
+                        ? null
+                        : _takePhoto,
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size.square(72),
+                      padding: const EdgeInsets.all(5),
+                      side: const BorderSide(
+                        color: MooverColors.surface,
+                        width: 4,
+                      ),
+                    ),
+                    icon: const SizedBox.square(
+                      dimension: 54,
+                      child: DecoratedBox(
+                        decoration: ShapeDecoration(
+                          shape: CircleBorder(),
+                          color: MooverColors.surface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Emulator tanpa kamera: foto diganti tanda simulasi.
+                  // Tidak ada di build release.
+                  if (!kReleaseMode)
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _shotAt = DateTime.now());
+                        _stopCamera();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: MooverColors.sky,
+                        minimumSize: const Size(48, 48),
+                      ),
+                      child: const Text('Simulasi tanpa kamera'),
+                    ),
+                ] else
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _retake,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: MooverColors.surface,
+                      side: const BorderSide(color: MooverColors.sky),
+                    ),
+                    icon: const Icon(LucideIcons.rotateCcw),
+                    label: const Text('Ulangi'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Lapisan di bawah teks/tombol saat preview tampil (navy 85%).
+const _scrimColor = Color(0xD906275C);
+
+/// Preview kamera memenuhi bingkai (dipotong, rasio tetap). Dekoratif bagi
+/// pembaca layar: petunjuk ada di teks bawahnya.
+class _Preview extends StatelessWidget {
+  const _Preview(this.camera);
+
+  final CameraController camera;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        // Preview potret: lebar = sisi pendek sensor.
+        width: 100,
+        height: 100 * camera.value.aspectRatio,
+        child: CameraPreview(camera),
+      ),
+    ),
+  );
 }
 
 /// Foto selfie bulat bertepi cyan + tanda centang (V2.1). [path] null =

@@ -56,7 +56,7 @@ class ActiveTripScreen extends StatelessWidget {
                   ],
                 ),
                 if (tripPoints[trip.number] case final points?)
-                  _RouteMap(points, height: 240)
+                  RouteMap(points, height: 240)
                 else
                   Text(
                     'Peta rute belum tersedia.',

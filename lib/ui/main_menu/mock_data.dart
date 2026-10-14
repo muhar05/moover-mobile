@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/themes/theme.dart';
+import '../trip/trip_store.dart';
 
 // MOCK/DEMO: data contoh untuk kerangka UI, bukan data server. Label status
 // dari DESIGN.md §4.7, tone dari Lampiran A.2. Format D4.
@@ -41,6 +42,12 @@ const tripsToday = <Trip>[
   ),
 ];
 
+/// Trip tambahan Tipe A dari S11, disimpan di SQLite ([tripStore]).
+final extraTrips = ValueNotifier<List<Trip>>(const []);
+
+/// Jadwal hari ini: jadwal mock lalu trip tambahan (urutan dibuat).
+List<Trip> todayTrips() => [...tripsToday, ...extraTrips.value];
+
 const tripHistory = <Trip>[
   (
     number: 'TRP-20261008-0003',
@@ -79,8 +86,8 @@ const tripHistory = <Trip>[
 // menimpa status mock. Label §4.7; tone: On Trip = indigo, sama dengan web
 // (A.2), bukan live V2.1 (keputusan pemilik project 2026-10-13). Indigo di
 // latarnya ≥4,5:1 (diuji di design_system_test).
-// ponytail: hanya di memori seperti [clockIn]; ganti dengan data server saat
-// API trip Terverifikasi.
+// Disimpan juga di SQLite perangkat ([tripStore], 2026-10-14).
+// ponytail: ganti dengan data server saat API trip Terverifikasi.
 typedef TripStatus = (String, StatusTone);
 const onTrip = ('Dalam Perjalanan', StatusTone.indigo);
 const waitingFeedback = ('Menunggu Feedback', StatusTone.warn);
@@ -96,9 +103,17 @@ final activeTrip = ValueNotifier<ActiveTrip?>(null);
 TripStatus statusOf(Trip t) => tripStatus.value[t.number] ?? (t.status, t.tone);
 
 /// [result] dicatat lebih dulu agar pendengar [tripStatus] membacanya.
+/// Start Trip: set [activeTrip] dulu agar waktu Start ikut disimpan.
 void setTripStatus(Trip t, TripStatus status, [TripResult? result]) {
   if (result != null) tripResults[t.number] = result;
   tripStatus.value = {...tripStatus.value, t.number: status};
+  final active = activeTrip.value;
+  tripStore.saveState(
+    t.number,
+    status,
+    result,
+    active?.trip.number == t.number ? active!.startedAt : null,
+  );
 }
 
 /// Hasil trip untuk S13: jam Start/End Trip ("HH.MM WIB"), rating 1–5 +
@@ -112,8 +127,9 @@ typedef TripResult = ({
 });
 
 // Riwayat contoh (fiktif) + hasil simulasi End/Cancel per nomor trip.
-// ponytail: hanya di memori seperti [tripStatus]; ganti dengan data server
-// saat API trip dan feedback Terverifikasi.
+// Hasil simulasi juga disimpan di SQLite ([tripStore]).
+// ponytail: ganti dengan data server saat API trip dan feedback
+// Terverifikasi.
 final tripResults = <String, TripResult>{
   'TRP-20261008-0003': (
     start: '14.05 WIB',
@@ -141,7 +157,7 @@ final tripResults = <String, TripResult>{
 /// Trip yang sudah lewat, terbaru dulu: trip hari ini yang diakhiri atau
 /// dibatalkan di simulasi, lalu [tripHistory].
 List<Trip> pastTrips() => [
-  for (final t in tripsToday.reversed)
+  for (final t in todayTrips().reversed)
     if (!{'Terjadwal', onTrip.$1}.contains(statusOf(t).$1)) t,
   ...tripHistory,
 ];
@@ -215,10 +231,11 @@ String tripDestination(Trip t) => _routeParts(t).last;
 // §9.2; paket flutter_map disetujui pemilik project 2026-10-13). Koordinat
 // fiktif di Jakarta Pusat/Selatan, sesuai alamat contoh.
 // ponytail: dipisah per nomor trip agar tipe [Trip] tidak berubah; pindah ke
-// data trip saat kontrak API trip Terverifikasi.
+// data trip saat kontrak API trip Terverifikasi. Trip Tipe A (S11) ditambah
+// [tripStore].
 const kantorPusat = LatLng(-6.1865, 106.8340);
 const kantorCabang = LatLng(-6.2607, 106.8105);
-const tripPoints = <String, (LatLng, LatLng)>{
+final tripPoints = <String, (LatLng, LatLng)>{
   'TRP-20261009-0001': (kantorPusat, kantorCabang),
   'TRP-20261009-0002': (kantorCabang, kantorPusat),
 };

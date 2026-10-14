@@ -9,8 +9,6 @@ part of 'main_menu_screen.dart';
 class _TripTab extends StatelessWidget {
   const _TripTab();
 
-  // MOCK/DEMO. ponytail: form Add New Trip (S11) belum dibuat (Q-B1);
-  // ganti dengan navigasi ke S11 saat aturannya dikonfirmasi.
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([clockIn, clockOut]),
@@ -68,7 +66,7 @@ class _TripTab extends StatelessWidget {
       children: [
         MooverExtraTripCard(
           available: clockedIn,
-          onAdd: () => _notYet(context, 'Form trip baru'),
+          onAdd: () => _addTrip(context),
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -132,7 +130,7 @@ class _TripTab extends StatelessWidget {
         // hari ini yang diakhiri/dibatalkan di simulasi. Cari & filter di
         // S12; item membuka S13 (2026-10-13).
         ListenableBuilder(
-          listenable: tripStatus,
+          listenable: Listenable.merge([tripStatus, extraTrips]),
           builder: (context, _) {
             final trips = pastTrips();
             return Column(
@@ -180,6 +178,30 @@ class _TripTab extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Buka S11; setelah tersimpan beri tahu tanpa klaim "berhasil" (D10).
+/// Trip baru tampil di Jadwal hari ini (Beranda); tindakan setelah simpan
+/// Perlu konfirmasi (Q-B1), demo memberi pintasan ke S07.
+Future<void> _addTrip(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final trip = await Navigator.of(context)
+      .push<Trip>(MaterialPageRoute(builder: (_) => const NewTripScreen()));
+  if (trip == null || !context.mounted) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          '${trip.number} disimpan di perangkat (belum dikirim ke server). '
+          'Tampil di Jadwal hari ini.',
+        ),
+        action: SnackBarAction(
+          label: 'Buka',
+          onPressed: () => openTrip(context, trip),
+        ),
+      ),
+    );
 }
 
 /// Tile jenis trip tambahan (V2.1): ikon di tile berwarna tone + label.

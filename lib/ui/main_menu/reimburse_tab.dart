@@ -2,10 +2,9 @@ part of 'main_menu_screen.dart';
 
 /// S14 Daftar Reimburse (KAK §5.1.16), gaya disamakan dengan tab Trip V2.1
 /// (V2.1 tidak punya layar reimburse): judul di Ground, kartu navy aksi
-/// Ajukan, filter status, lalu kartu per pengajuan. Usulan aktif. Form S15
-/// dan detail S16 belum ada (Q-B6, Q-T1): Ajukan memberi tahu belum tersedia.
-/// ponytail: nomor reimburse (S14) belum ada di data mock; tambahkan ke
-/// [Reimburse] saat kontrak API reimburse Terverifikasi.
+/// Ajukan, filter status, lalu kartu per pengajuan. Usulan aktif. Ajukan →
+/// S15, kartu → S16; data SQLite perangkat (keputusan pemilik project
+/// 2026-10-14).
 class _ReimburseTab extends StatefulWidget {
   const _ReimburseTab();
 
@@ -14,18 +13,21 @@ class _ReimburseTab extends StatefulWidget {
 }
 
 class _ReimburseTabState extends State<_ReimburseTab> {
-  // Label status reimburse DESIGN.md §4.7; null = semua.
-  static const _statuses = ['Diajukan', 'Disetujui', 'Ditolak', 'Dibayar'];
-  String? _status;
+  // null = semua.
+  ReimburseStatus? _status;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: reimburseStore, builder: _build);
+
+  Widget _build(BuildContext context, Widget? _) {
     final textTheme = Theme.of(context).textTheme;
+    final all = reimburseStore.items;
     final items = [
-      for (final r in reimbursements)
+      for (final r in all ?? <Reimbursement>[])
         if (_status == null || r.status == _status) r,
     ];
-    Widget chip(String label, String? status) {
+    Widget chip(String label, ReimburseStatus? status) {
       final selected = _status == status;
       // Terpilih: putih di primary 8,62:1; tidak: tepi muted 5,76:1 (D9).
       return ChoiceChip(
@@ -51,25 +53,53 @@ class _ReimburseTabState extends State<_ReimburseTab> {
       subtitle: 'Pengajuan biaya tol, parkir, BBM, dan lainnya.',
       children: [
         const _SubmitCard(),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: MooverSpace.md,
-          children: [
-            MooverSectionHeader('Pengajuan', trailing: '${items.length} item'),
-            Wrap(
-              spacing: MooverSpace.sm,
+        if (reimburseStore.failed)
+          ErrorView(
+            message: 'Data reimburse tidak dapat dimuat.',
+            onRetry: reimburseStore.load,
+          )
+        else if (all == null)
+          // D10: skeleton saat memuat.
+          Semantics(
+            label: 'Memuat pengajuan',
+            child: Column(
+              spacing: MooverSpace.md,
               children: [
-                chip('Semua', null),
-                for (final s in _statuses) chip(s, s),
+                for (var i = 0; i < 3; i++) const SkeletonBox(height: 88),
               ],
             ),
-            for (final r in items) _ReimburseItem(r),
-            if (items.isEmpty)
-              const EmptyView(
-                message: 'Belum ada pengajuan dengan status ini.',
+          )
+        else if (all.isEmpty)
+          EmptyView(
+            message: 'Belum ada pengajuan',
+            action: OutlinedButton(
+              onPressed: () => openReimburseForm(context),
+              child: const Text('Ajukan'),
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: MooverSpace.md,
+            children: [
+              MooverSectionHeader(
+                'Pengajuan',
+                trailing: '${items.length} item',
               ),
-          ],
-        ),
+              Wrap(
+                spacing: MooverSpace.sm,
+                children: [
+                  chip('Semua', null),
+                  for (final s in ReimburseStatus.values) chip(s.label, s),
+                ],
+              ),
+              for (final r in items) _ReimburseItem(r),
+              if (items.isEmpty)
+                const EmptyView(
+                  message: 'Belum ada pengajuan dengan status ini.',
+                ),
+            ],
+          ),
       ],
     );
   }
@@ -137,7 +167,7 @@ class _SubmitCard extends StatelessWidget {
               ],
             ),
             FilledButton.icon(
-              onPressed: () => _notYet(context, 'Form reimburse'),
+              onPressed: () => openReimburseForm(context),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
                 backgroundColor: MooverColors.cyan,

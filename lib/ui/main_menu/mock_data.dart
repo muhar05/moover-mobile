@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
 
@@ -15,15 +14,6 @@ typedef Trip = ({
   // Alamat tujuan, hanya di jadwal hari ini (V2.1 Home). Fiktif.
   String? address,
   String? passengers,
-  String status,
-  StatusTone tone,
-});
-
-typedef Reimburse = ({
-  String category,
-  IconData icon,
-  String amount,
-  String date,
   String status,
   StatusTone tone,
 });
@@ -232,39 +222,3 @@ const tripPoints = <String, (LatLng, LatLng)>{
   'TRP-20261009-0001': (kantorPusat, kantorCabang),
   'TRP-20261009-0002': (kantorCabang, kantorPusat),
 };
-
-const reimbursements = <Reimburse>[
-  (
-    category: 'Tol',
-    // Lucide tidak punya ikon tol: karcis (pemilik project 2026-10-11).
-    icon: LucideIcons.ticket,
-    amount: 'Rp 45.000',
-    date: '8 Okt 2026',
-    status: 'Diajukan',
-    tone: StatusTone.neutral,
-  ),
-  (
-    category: 'BBM',
-    icon: LucideIcons.fuel,
-    amount: 'Rp 300.000',
-    date: '6 Okt 2026',
-    status: 'Disetujui',
-    tone: StatusTone.info,
-  ),
-  (
-    category: 'Parkir',
-    icon: LucideIcons.circleParking,
-    amount: 'Rp 20.000',
-    date: '3 Okt 2026',
-    status: 'Dibayar',
-    tone: StatusTone.ok,
-  ),
-  (
-    category: 'Lainnya',
-    icon: LucideIcons.receipt,
-    amount: 'Rp 75.000',
-    date: '1 Okt 2026',
-    status: 'Ditolak',
-    tone: StatusTone.err,
-  ),
-];

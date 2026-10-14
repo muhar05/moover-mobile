@@ -9,7 +9,7 @@ import '../main_menu/main_menu_screen.dart';
 
 // MOCK/DEMO: kredensial hardcode sementara, bukan autentikasi. Tidak ada
 // server, token, atau sesi tersimpan.
-// ponytail: hapus saat login API (API_CONTRACT U1) Terverifikasi.
+// ponytail: hapus saat login AP (API_CONTRACT U1) Terverifikasi.
 const demoEmployeeId = 'DEMO001';
 const demoPassword = 'demo1234';
 const demoDriverName = 'Driver Demo';

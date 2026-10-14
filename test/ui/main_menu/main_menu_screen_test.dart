@@ -7,6 +7,7 @@ import 'package:moover/ui/core/widgets/widgets.dart';
 import 'package:moover/ui/landing/landing_screen.dart';
 import 'package:moover/ui/login/login_screen.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
+import 'package:moover/ui/reimburse/reimburse_form_screen.dart';
 import 'package:moover/ui/time_log/time_log_screen.dart';
 import 'package:moover/ui/main_menu/mock_data.dart'
     show clockIn, clockOut, demoDriverEmail, vehicle;
@@ -913,7 +914,8 @@ void main() {
       greaterThanOrEqualTo(4.5),
     );
 
-    // Kartu navy: aksi Ajukan memberi tahu belum tersedia (S15 belum ada).
+    // Kartu navy: aksi Ajukan membuka S15 (2026-10-14; dulu "belum
+    // tersedia").
     final ajukan = find.text('Ajukan reimburse');
     expect(
       tester.getTopLeft(ajukan).dy,
@@ -935,8 +937,11 @@ void main() {
       expect(contrast(c, bg), greaterThanOrEqualTo(4.5), reason: t);
     }
     await tester.tap(ajukan);
-    await tester.pump();
-    expect(find.text('Form reimburse belum tersedia.'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReimburseFormScreen), findsOneWidget);
+    expect(find.text('Form reimburse belum tersedia.'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     // Tiap pengajuan kartu sendiri (seperti trip), dibaca satu item.
     final cards = find.ancestor(
@@ -954,7 +959,10 @@ void main() {
     expect(cards, findsNothing, reason: 'tidak dibungkus satu kartu');
     expect(
       tester.getSemantics(find.text('Rp 45.000')),
-      isSemantics(label: 'Tol\nRp 45.000\n8 Okt 2026\nDiajukan'),
+      isSemantics(
+        label: 'Tol\nRp 45.000\nRMB-202610-0004\n8 Okt 2026\nDiajukan',
+        hasTapAction: true,
+      ),
     );
 
     // Filter status: label §4.7, terpilih primary + putih, jumlah ikut.

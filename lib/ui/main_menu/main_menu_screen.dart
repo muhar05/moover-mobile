@@ -9,6 +9,8 @@ import '../core/themes/theme.dart';
 import '../core/widgets/spread.dart';
 import '../core/widgets/widgets.dart';
 import '../login/login_screen.dart';
+import '../reimburse/reimburse_detail_screen.dart';
+import '../reimburse/reimburse_store.dart';
 import '../time_log/time_log_screen.dart';
 import '../trip/trip_detail_screen.dart';
 import 'mock_data.dart';
@@ -50,6 +52,12 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   ];
 
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (reimburseStore.items == null) reimburseStore.load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -389,18 +397,25 @@ class _TripItem extends StatelessWidget {
   }
 }
 
+/// Kartu reimburse → S16.
 class _ReimburseItem extends StatelessWidget {
   const _ReimburseItem(this.item);
 
-  final Reimburse item;
+  final Reimbursement item;
 
   @override
   Widget build(BuildContext context) => MooverReimburseItem(
-    category: item.category,
-    icon: item.icon,
-    amount: item.amount,
-    date: item.date,
-    status: item.status,
-    tone: item.tone,
+    number: item.number,
+    category: item.draft.category.label,
+    icon: item.draft.category.icon,
+    amount: formatRupiah(item.draft.amount),
+    date: shortDate(item.draft.date),
+    status: item.status.label,
+    tone: item.status.tone,
+    onTap: () => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ReimburseDetailScreen(id: item.id),
+      ),
+    ),
   );
 }

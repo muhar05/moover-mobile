@@ -114,8 +114,9 @@ flutter run -d <id-hp> --profile   # cek kelancaran animasi/scroll
 | Trip (S07–S10) | Beranda → ketuk jadwal → Mulai trip (dialog) → S08; tombol Back HP kembali ke Beranda, banner "Trip berjalan · Lanjutkan" tampil di semua tab; Akhiri trip (centang) → S10 → Selesai; Batalkan dengan alasan |
 | Peta rute (S07–S08) | build **release**: tile OSM tampil di S07 dan S08 dengan garis asal → tujuan dan "© OpenStreetMap"; mode pesawat → "Peta tidak dapat dimuat…", detail trip tetap tampil; TalkBack melewati peta |
 | Riwayat trip (S12–S13) | tab Trip → Riwayat → ketuk item → S13 (rating + komentar / menunggu feedback / alasan batal); "Cari & filter" → S12: ketik kata kunci, chip status, rentang tanggal (kalender), Reset filter; trip yang diakhiri/dibatalkan hari ini muncul di Riwayat |
-| TalkBack / VoiceOver | S12, S13 (kartu feedback dibaca "N dari 5"); S07, S08, S10, banner trip; Beranda, S04, S05: urutan baca, header, label tombol ikon, kartu dibaca utuh |
-| Teks 200% | *Pengaturan → Ukuran font* maksimum: tidak ada teks terpotong di semua tab, S04, S05, S07, S08, S10, S12, S13, kalender rentang tanggal, sheet Batalkan/Akhiri |
+| Reimburse (S14–S16) | Ajukan → isi form → **Ambil foto nota** (kamera belakang; izin ditolak → pesan galat) → Kirim → nomor RMB baru di daftar; **tutup paksa app lalu buka lagi: data tetap ada** (SQLite); ketuk Ditolak → catatan → Perbaiki & ajukan ulang → timeline penolakan tetap; Dibayar → bukti transfer; "Simulasi tanpa kamera" **tidak ada** di build release |
+| TalkBack / VoiceOver | S14–S16; S12, S13 (kartu feedback dibaca "N dari 5"); S07, S08, S10, banner trip; Beranda, S04, S05: urutan baca, header, label tombol ikon, kartu dibaca utuh |
+| Teks 200% | *Pengaturan → Ukuran font* maksimum: tidak ada teks terpotong di semua tab, S04, S15, S16, S05, S07, S08, S10, S12, S13, kalender rentang tanggal, sheet Batalkan/Akhiri |
 | Reduced motion | *Hapus animasi* aktif: carousel Landing berhenti, animasi mobil diam |
 | Performa | build `--profile`: scroll dan transisi halus, tanpa jank |
 | iOS | semua baris di atas di iPhone |

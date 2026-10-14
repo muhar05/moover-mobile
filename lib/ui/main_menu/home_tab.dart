@@ -120,9 +120,15 @@ class _HomeTabState extends State<_HomeTab> {
             ],
           ),
         ),
-        _Section(
-          title: 'Reimburse terakhir',
-          children: [_ReimburseItem(reimbursements.first)],
+        ListenableBuilder(
+          listenable: reimburseStore,
+          builder: (context, _) => switch (reimburseStore.items) {
+            [final last, ...] => _Section(
+              title: 'Reimburse terakhir',
+              children: [_ReimburseItem(last)],
+            ),
+            _ => const SizedBox.shrink(),
+          },
         ),
       ],
     );

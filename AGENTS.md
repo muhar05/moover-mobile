@@ -78,6 +78,7 @@ Aturan:
 | Ikon | `lucide_icons_flutter` (MIT, gaya garis V2.1; disetujui 2026-10-11). Jangan pakai `Icons.*` Material |
 | Kamera | `camera` (selfie clock-in/out di dalam layar app, `enableAudio: false`; disetujui 2026-10-14) |
 | Foto struk | `image_picker` (form reimburse) |
+| Buka app bawaan | `url_launcher` (S21 WhatsApp/email/telepon; disetujui 2026-10-20) |
 | Peta | `flutter_map` + `latlong2`, tile OpenStreetMap (Leaflet/OSM, KAK §9.2) |
 | Penyimpanan lokal | `sqflite` (`sqflite_common_ffi` untuk tes). Skema tabel sengaja mengikuti usulan kontrak data (`docs/TRIP_DATA.md`, `docs/REIMBURSE_DATA.md`) agar data yang diserahkan ke backend sudah terstruktur; bukan pengganti backend |
 | Lint | `flutter_lints` |

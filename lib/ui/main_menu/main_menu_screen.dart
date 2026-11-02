@@ -8,13 +8,16 @@ import '../attendance/attendance_screen.dart';
 import '../core/themes/theme.dart';
 import '../core/widgets/spread.dart';
 import '../core/widgets/widgets.dart';
+import '../faq/faq_screen.dart';
 import '../login/login_screen.dart';
 import '../reimburse/reimburse_detail_screen.dart';
 import '../reimburse/reimburse_store.dart';
+import '../support/support_screen.dart';
 import '../time_log/time_log_screen.dart';
 import '../trip/new_trip_screen.dart';
 import '../trip/trip_detail_screen.dart';
 import '../trip/trip_store.dart';
+import '../vehicle/vehicle_screen.dart';
 import 'mock_data.dart';
 
 part 'account_tab.dart';

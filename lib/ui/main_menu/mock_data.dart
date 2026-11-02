@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/themes/theme.dart';
 import '../trip/trip_store.dart';
@@ -259,6 +260,68 @@ const vehicle = (
   capacity: '6 kursi',
   image: 'assets/images/vehicles/vehicle-placeholder.jpg',
 );
+
+typedef Faq = ({String question, String answer});
+
+// MOCK/DEMO: FAQ contoh untuk S20, mengikuti alur demo. Konten asli Perlu
+// konfirmasi (Q-B8).
+const faqs = <Faq>[
+  (
+    question: 'Bagaimana cara clock-in?',
+    answer:
+        'Di Beranda, ketuk Clock-in, ambil foto wajah di dalam bingkai, lalu '
+        'kirim. Clock-out memakai cara yang sama.',
+  ),
+  (
+    question: 'Bagaimana memulai dan mengakhiri trip?',
+    answer:
+        'Buka trip dari Beranda atau tab Trip, lalu ketuk Mulai trip. Saat '
+        'trip berjalan, ketuk Akhiri trip setelah sampai di tujuan terakhir.',
+  ),
+  (
+    question: 'Bisakah saya menambah atau mengubah tujuan?',
+    answer:
+        'Tujuan bisa ditambah saat trip berjalan lewat Tambah tujuan. '
+        'Mengubah atau menghapus tujuan diatur oleh pemesan.',
+  ),
+  (
+    question: 'Bagaimana mengajukan reimburse?',
+    answer:
+        'Buka tab Reimburse, ketuk Ajukan reimburse, isi kategori, nominal, '
+        'dan foto nota, lalu ketuk Kirim pengajuan.',
+  ),
+  (
+    question: 'Saya lupa kata sandi, apa yang harus dilakukan?',
+    answer:
+        'Akun dibuat oleh admin. Hubungi support melalui menu Hubungi support '
+        'di tab Akun.',
+  ),
+];
+
+typedef SupportContact = ({IconData icon, String label, String value, Uri uri});
+
+// MOCK/DEMO: kontak support S21, fiktif (domain .example RFC 2606, nomor
+// berisi nol). Kontak asli Perlu konfirmasi (Q-B8).
+final supportContacts = <SupportContact>[
+  (
+    icon: LucideIcons.messageCircle,
+    label: 'WhatsApp',
+    value: '+62 812-0000-0000',
+    uri: Uri.https('wa.me', '/6281200000000'),
+  ),
+  (
+    icon: LucideIcons.mail,
+    label: 'Email',
+    value: 'support@moover.example',
+    uri: Uri(scheme: 'mailto', path: 'support@moover.example'),
+  ),
+  (
+    icon: LucideIcons.phone,
+    label: 'Telepon',
+    value: '(021) 000-0000',
+    uri: Uri(scheme: 'tel', path: '+62210000000'),
+  ),
+];
 
 // Email driver di kartu profil Akun. Fiktif (keputusan pemilik project
 // 2026-10-10); domain .example dicadangkan RFC 2606, tidak milik siapa pun.

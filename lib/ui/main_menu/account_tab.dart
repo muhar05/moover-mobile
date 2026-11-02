@@ -336,10 +336,28 @@ class _MenuGroup extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     child: InkWell(
-                      // S05 sudah ada; menu lain belum.
-                      onTap: label == 'Time Log'
-                          ? () => _openTimeLog(context)
-                          : () => _notYet(context, label),
+                      // S05, S19, S20, S21 sudah ada; menu lain belum.
+                      onTap: switch (label) {
+                        'Time Log' => () => _openTimeLog(context),
+                        'Kendaraan' => () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const VehicleScreen(vehicle: vehicle),
+                          ),
+                        ),
+                        'Bantuan & FAQ' => () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const FaqScreen(faqs: faqs),
+                          ),
+                        ),
+                        'Hubungi support' => () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                SupportScreen(contacts: supportContacts),
+                          ),
+                        ),
+                        _ => () => _notYet(context, label),
+                      },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: MooverSpace.lg,

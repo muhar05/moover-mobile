@@ -4,13 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:moover/ui/attendance/attendance_screen.dart';
 import 'package:moover/ui/core/themes/theme.dart';
 import 'package:moover/ui/core/widgets/widgets.dart';
+import 'package:moover/ui/faq/faq_screen.dart';
 import 'package:moover/ui/landing/landing_screen.dart';
 import 'package:moover/ui/login/login_screen.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
 import 'package:moover/ui/reimburse/reimburse_form_screen.dart';
+import 'package:moover/ui/support/support_screen.dart';
 import 'package:moover/ui/time_log/time_log_screen.dart';
+import 'package:moover/ui/vehicle/vehicle_screen.dart';
 import 'package:moover/ui/main_menu/mock_data.dart'
-    show clockIn, clockOut, demoDriverEmail, vehicle;
+    show clockIn, clockOut, demoDriverEmail, faqs, supportContacts, vehicle;
 
 import '../core/design_system_test.dart' show contrast;
 
@@ -674,7 +677,8 @@ void main() {
     expect(iconColor('Hubungi support'), StatusTone.live.foreground);
 
     // Tiap baris satu tombol berlabel; ketuk = belum tersedia, kecuali
-    // Time Log (S05 sudah ada, dites terpisah).
+    // Time Log, Kendaraan, Bantuan & FAQ, Hubungi support (S05, S19, S20,
+    // S21 sudah ada, dites terpisah).
     for (final m in [...groups.values.expand((m) => m)]) {
       final row = find.text(m).last;
       expect(
@@ -683,7 +687,13 @@ void main() {
         reason: m,
       );
       expect(tester.getSemantics(row).label, startsWith(m));
-      if (m == 'Time Log') continue;
+      if (m
+          case 'Time Log' ||
+              'Kendaraan' ||
+              'Bantuan & FAQ' ||
+              'Hubungi support') {
+        continue;
+      }
       await tester.tap(row);
       await tester.pump();
       expect(find.text('$m belum tersedia.'), findsOneWidget, reason: m);
@@ -1311,5 +1321,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TimeLogScreen), findsOneWidget);
     expect(find.text('Time Log belum tersedia.'), findsNothing);
+  });
+
+  testWidgets('Akun → Kendaraan membuka S19 dengan kendaraan driver', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Kendaraan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kendaraan'));
+    await tester.pumpAndSettle();
+    expect(find.byType(VehicleScreen), findsOneWidget);
+    expect(find.text(vehicle.plate), findsOneWidget);
+    expect(find.text('Kendaraan belum tersedia.'), findsNothing);
+  });
+
+  testWidgets('Akun → Bantuan & FAQ membuka S20 dengan FAQ', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Bantuan & FAQ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bantuan & FAQ'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FaqScreen), findsOneWidget);
+    expect(find.text(faqs.first.question), findsOneWidget);
+    expect(find.text('Bantuan & FAQ belum tersedia.'), findsNothing);
+  });
+
+  testWidgets('Akun → Hubungi support membuka S21 dengan kontak', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Hubungi support'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hubungi support'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SupportScreen), findsOneWidget);
+    expect(find.text(supportContacts.first.value), findsOneWidget);
+    expect(find.text('Hubungi support belum tersedia.'), findsNothing);
   });
 }

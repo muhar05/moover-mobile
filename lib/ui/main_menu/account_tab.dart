@@ -6,6 +6,16 @@ const appVersion = '0.1.0';
 
 typedef _Menu = (IconData icon, String title, String subtitle);
 
+void _openProfile(BuildContext context) => Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => const ProfileScreen(
+      name: demoDriverName,
+      employeeId: demoEmployeeId,
+      email: demoDriverEmail,
+    ),
+  ),
+);
+
 /// S17 Akun. Gabungan menu DESIGN.md S17 dan V2.1 Settings (keputusan
 /// pemilik project 2026-10-10, belum di DESIGN.md): grup Akun dan Bantuan,
 /// judul tetap "Akun", email fiktif, versi hardcode. Penempatan Kendaraan dan
@@ -153,13 +163,14 @@ class _AccountTab extends StatelessWidget {
             child: Semantics(
               button: true,
               child: InkWell(
-                onTap: () => _notYet(context, 'Informasi profil'),
+                onTap: () => _openProfile(context),
                 child: Padding(
                   padding: const EdgeInsets.all(MooverSpace.lg),
                   child: Row(
                     spacing: 14,
                     children: [
-                      const _Avatar(
+                      const MooverAvatar(
+                        name: demoDriverName,
                         size: 64,
                         ring: 3,
                         border: MooverColors.surface,
@@ -336,8 +347,10 @@ class _MenuGroup extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     child: InkWell(
-                      // S05, S19, S20, S21 sudah ada; menu lain belum.
+                      // S05, S18 (hanya baca), S19, S20, S21 sudah ada;
+                      // Ubah kata sandi belum.
                       onTap: switch (label) {
+                        'Informasi profil' => () => _openProfile(context),
                         'Time Log' => () => _openTimeLog(context),
                         'Kendaraan' => () => Navigator.of(context).push(
                           MaterialPageRoute<void>(

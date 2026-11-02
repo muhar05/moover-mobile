@@ -473,9 +473,10 @@ class _EndSheetState extends State<_EndSheet> {
 
 /// S10 QR Feedback (KAK §5.1.7), layar penuh (UD1). Tidak ada judul
 /// "selesai/berhasil" (D10): trip diakhiri di simulasi, belum di server.
-/// ponytail: QR asli butuh dependency + isi QR Perlu konfirmasi (Q-B5,
-/// Q-T3); di sini placeholder ikon. Kecerahan layar dan buka ulang QR juga
-/// Q-B5/Q-T3.
+/// QR asli (paket qr_flutter, disetujui pemilik project 2026-11-02).
+/// ponytail: isi QR sementara nomor trip saja, tanpa backend (keputusan
+/// 2026-11-02); link form feedback + keamanannya Perlu konfirmasi (Q-B5,
+/// Q-T3). Kecerahan layar dan buka ulang QR juga Q-B5/Q-T3.
 class QrFeedbackScreen extends StatelessWidget {
   const QrFeedbackScreen({super.key, required this.trip});
 
@@ -516,17 +517,21 @@ class QrFeedbackScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(MooverRadius.card),
                   border: Border.all(color: MooverColors.hairline),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: MooverSpace.sm,
-                  children: [
-                    const Icon(
-                      LucideIcons.qrCode,
-                      size: 96,
-                      color: MooverColors.text,
-                    ),
-                    Text('QR contoh', style: muted),
-                  ],
+                padding: const EdgeInsets.all(MooverSpace.md),
+                // Modul text di surface 18,9:1 (QR butuh kontras tinggi).
+                child: QrImageView(
+                  data: trip.number,
+                  padding: EdgeInsets.zero,
+                  backgroundColor: MooverColors.surface,
+                  semanticsLabel: 'QR feedback trip ${trip.number}',
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: MooverColors.text,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: MooverColors.text,
+                  ),
                 ),
               ),
             ),
@@ -547,7 +552,8 @@ class QrFeedbackScreen extends StatelessWidget {
             ),
             const SizedBox(height: MooverSpace.lg),
             Text(
-              'Trip diakhiri di simulasi (belum dikirim ke server).',
+              'Trip diakhiri di simulasi (belum dikirim ke server). QR '
+              'berisi nomor trip saja.',
               textAlign: TextAlign.center,
               style: muted,
             ),

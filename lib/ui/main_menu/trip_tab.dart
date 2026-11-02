@@ -353,7 +353,8 @@ class _VehicleCard extends StatelessWidget {
                     children: [
                       // V2.1: foto driver; di sini avatar inisial (tanpa
                       // foto asli).
-                      const _Avatar(
+                      const MooverAvatar(
+                        name: demoDriverName,
                         size: 30,
                         ring: 1.5,
                         border: MooverColors.surface,

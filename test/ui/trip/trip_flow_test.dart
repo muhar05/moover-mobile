@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:moover/ui/core/themes/theme.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:moover/ui/core/widgets/widgets.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
 import 'package:moover/ui/main_menu/mock_data.dart';
@@ -192,6 +193,49 @@ void main() {
     );
     await tap(tester, find.text('Akhiri trip'));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('S10: QR asli berisi nomor trip, kontras tinggi', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(app(home: QrFeedbackScreen(trip: first)));
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('QR feedback trip ${first.number}'),
+      findsOneWidget,
+    );
+    // Isi QR: gambar painter layar == gambar QR acuan dari nomor trip.
+    final painter =
+        tester
+                .widget<CustomPaint>(
+                  find.descendant(
+                    of: find.byType(QrImageView),
+                    matching: find.byType(CustomPaint),
+                  ),
+                )
+                .painter!
+            as QrPainter;
+    final reference = QrPainter(
+      data: first.number,
+      version: QrVersions.auto,
+      errorCorrectionLevel: painter.errorCorrectionLevel,
+      gapless: painter.gapless,
+      eyeStyle: painter.eyeStyle,
+      dataModuleStyle: painter.dataModuleStyle,
+    );
+    final (got, want) = (await tester.runAsync(
+      () async => (
+        (await painter.toImageData(200))!.buffer.asUint8List(),
+        (await reference.toImageData(200))!.buffer.asUint8List(),
+      ),
+    ))!;
+    expect(got, want);
+    expect(painter.eyeStyle.color, MooverColors.text);
+    expect(painter.dataModuleStyle.color, MooverColors.text);
+    expect(
+      contrast(MooverColors.text, MooverColors.surface),
+      greaterThanOrEqualTo(4.5),
+    );
+    handle.dispose();
   });
 
   testWidgets('target sentuh, label, semantik', (tester) async {

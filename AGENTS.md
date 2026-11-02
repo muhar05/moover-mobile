@@ -79,6 +79,7 @@ Aturan:
 | Kamera | `camera` (selfie clock-in/out di dalam layar app, `enableAudio: false`; disetujui 2026-10-14) |
 | Foto struk | `image_picker` (form reimburse) |
 | Buka app bawaan | `url_launcher` (S21 WhatsApp/email/telepon; disetujui 2026-10-20) |
+| QR | `qr_flutter` (S10 QR feedback, isi sementara nomor trip; disetujui 2026-11-02) |
 | Peta | `flutter_map` + `latlong2`, tile OpenStreetMap (Leaflet/OSM, KAK §9.2) |
 | Penyimpanan lokal | `sqflite` (`sqflite_common_ffi` untuk tes). Skema tabel sengaja mengikuti usulan kontrak data (`docs/TRIP_DATA.md`, `docs/REIMBURSE_DATA.md`) agar data yang diserahkan ke backend sudah terstruktur; bukan pengganti backend |
 | Lint | `flutter_lints` |
@@ -166,6 +167,7 @@ Ringkasan visual yang sudah diimplementasikan: `DESIGN.md` di root repo ini. Kep
 | Komponen | Fungsi |
 |---|---|
 | `MooverLogo` | logo brand |
+| `MooverAvatar` | avatar inisial driver (ring gradient), dekoratif; foto Belum ditentukan (Q-B6) |
 | `MooverBottomNavigation` | bottom nav mengambang 4 tab, semantik tab terpilih |
 | `MooverSectionHeader` | judul bagian + trailing muted |
 | `MooverRouteTimeline` | rute asal → tujuan vertikal; `onDark` untuk latar gelap; satu label semantik |

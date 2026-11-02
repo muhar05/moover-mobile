@@ -66,7 +66,12 @@ class _HomeTabState extends State<_HomeTab> {
                 ),
               ),
               // V2.1: avatar 48, ring 2, tepi navy 2.
-              const _Avatar(size: 48, ring: 2, border: MooverColors.navy),
+              const MooverAvatar(
+                name: demoDriverName,
+                size: 48,
+                ring: 2,
+                border: MooverColors.navy,
+              ),
             ],
           ),
           ListenableBuilder(

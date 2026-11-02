@@ -10,6 +10,7 @@ import '../core/widgets/spread.dart';
 import '../core/widgets/widgets.dart';
 import '../faq/faq_screen.dart';
 import '../login/login_screen.dart';
+import '../profile/profile_screen.dart';
 import '../reimburse/reimburse_detail_screen.dart';
 import '../reimburse/reimburse_store.dart';
 import '../support/support_screen.dart';
@@ -297,54 +298,6 @@ class _NavyHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Avatar inisial driver dengan ring gradient blue700 → cyan (V2.1) dan tepi
-/// [border]. Dekoratif (nama ditulis di sebelahnya); inisial blue700 di
-/// blueTint 6,67:1. Foto driver: Belum ditentukan (tidak ada data).
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.size, required this.ring, required this.border});
-
-  final double size;
-  final double ring;
-  final Color border;
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = demoDriverName.split(' ').map((w) => w[0]).join();
-    return ExcludeSemantics(
-      child: Container(
-        width: size,
-        height: size,
-        padding: EdgeInsets.all(ring),
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [MooverColors.blue700, MooverColors.cyan],
-          ),
-        ),
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: MooverColors.blueTint,
-            border: Border.all(color: border, width: 2),
-          ),
-          child: FittedBox(
-            child: Text(
-              initials,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: MooverColors.primary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

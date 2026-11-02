@@ -1,5 +1,6 @@
 // Komponen reusable Moover. Cukup impor file ini.
 export 'agenda_card.dart';
+export 'avatar.dart';
 export 'bottom_navigation.dart';
 export 'extra_trip_card.dart';
 export 'logo.dart';

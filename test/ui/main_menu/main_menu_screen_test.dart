@@ -8,6 +8,7 @@ import 'package:moover/ui/faq/faq_screen.dart';
 import 'package:moover/ui/landing/landing_screen.dart';
 import 'package:moover/ui/login/login_screen.dart';
 import 'package:moover/ui/main_menu/main_menu_screen.dart';
+import 'package:moover/ui/profile/profile_screen.dart';
 import 'package:moover/ui/reimburse/reimburse_form_screen.dart';
 import 'package:moover/ui/support/support_screen.dart';
 import 'package:moover/ui/time_log/time_log_screen.dart';
@@ -677,8 +678,8 @@ void main() {
     expect(iconColor('Hubungi support'), StatusTone.live.foreground);
 
     // Tiap baris satu tombol berlabel; ketuk = belum tersedia, kecuali
-    // Time Log, Kendaraan, Bantuan & FAQ, Hubungi support (S05, S19, S20,
-    // S21 sudah ada, dites terpisah).
+    // menu yang layarnya sudah ada (S05, S18 hanya baca, S19, S20, S21;
+    // dites terpisah).
     for (final m in [...groups.values.expand((m) => m)]) {
       final row = find.text(m).last;
       expect(
@@ -688,7 +689,8 @@ void main() {
       );
       expect(tester.getSemantics(row).label, startsWith(m));
       if (m
-          case 'Time Log' ||
+          case 'Informasi profil' ||
+              'Time Log' ||
               'Kendaraan' ||
               'Bantuan & FAQ' ||
               'Hubungi support') {
@@ -698,9 +700,7 @@ void main() {
       await tester.pump();
       expect(find.text('$m belum tersedia.'), findsOneWidget, reason: m);
     }
-    await tester.tap(find.text(demoDriverEmail));
-    await tester.pump();
-    expect(find.text('Informasi profil belum tersedia.'), findsOneWidget);
+    // Kartu profil membuka S18 (dites terpisah).
     expect(find.byType(MainMenuScreen), findsOneWidget);
 
     // Footer: tanda Moover + versi dari pubspec, muted di latar.
@@ -1364,5 +1364,24 @@ void main() {
     expect(find.byType(SupportScreen), findsOneWidget);
     expect(find.text(supportContacts.first.value), findsOneWidget);
     expect(find.text('Hubungi support belum tersedia.'), findsNothing);
+  });
+
+  testWidgets('Akun → kartu profil dan menu Informasi profil membuka S18', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(tab('Akun'));
+    await tester.pumpAndSettle();
+    for (final target in [demoDriverEmail, 'Informasi profil']) {
+      await tester.ensureVisible(find.text(target).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(target).last);
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsOneWidget, reason: target);
+      expect(find.text(demoEmployeeId), findsOneWidget, reason: target);
+      expect(find.text('Informasi profil belum tersedia.'), findsNothing);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
   });
 }
